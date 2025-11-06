@@ -1,15 +1,26 @@
 <template>
-  <div class="h-full w-full flex flex-col items-center justify-start relative">
-    <div class="h-0 w-full grow flex flex-col items-center justify-center">
-      <img src="@/assets/logo-dark.png" class="w-24 h-24" loading="lazy" />
-      <h1 class="text-2xl font-bold px-8 pt-4">{{ t('newThread.greeting') }}</h1>
-      <h3 class="text-lg px-8 pb-2">{{ t('newThread.prompt') }}</h3>
-      <div class="h-12"></div>
+  <div class="h-full w-full flex flex-col items-center justify-between relative">
+    <div class="w-full grow flex flex-col items-center justify-center px-4">
+      <!-- 移除logo图标 -->
+      <!-- <img src="@/assets/logo-dark.png" class="w-24 h-24" loading="lazy" /> -->
+      <!-- 替换原有的欢迎语，显示自定义文本 -->
+      <div class="w-full max-w-2xl">
+        <h1 v-if="customText" class="text-xl md:text-2xl font-bold py-4 text-center whitespace-pre-line">{{ customText }}</h1>
+        <!-- 如果自定义文本为空或出错，显示默认欢迎语 -->
+        <h1 v-else class="text-xl md:text-2xl font-bold py-4">{{ t('newThread.greeting') }}</h1>
+        <h3 v-if="!customText" class="text-lg px-8 pb-2">{{ t('newThread.prompt') }}</h3>
+        <!-- 显示错误信息（如果有） -->
+        <p v-if="customTextError" class="text-sm text-red-500 px-8 mt-2">{{ customTextError }}</p>
+      </div>
+    </div>
+    
+    <!-- 固定在底部的输入框区域 -->
+    <div class="w-full px-4 py-4 pb-16">
       <ChatInput
         ref="chatInputRef"
         key="newThread"
         variant="newThread"
-        class="shrink-0 px-4"
+        class="w-full"
         :rows="3"
         :max-rows="10"
         :context-length="contextLength"
@@ -20,7 +31,7 @@
             <PopoverTrigger as-child>
               <Button
                 variant="ghost"
-                class="flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-semibold text-muted-foreground hover:bg-muted/60 hover:text-foreground dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+                class="flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-semibold text-muted-foreground hover:bg-muted/60 hover:text-foreground dark:text-white/70 dark:hover:bg-muted/60 dark:hover:text-white"
                 size="sm"
               >
                 <ModelIcon
@@ -86,8 +97,8 @@
           </ScrollablePopover>
         </template>
       </ChatInput>
-      <div class="h-12"></div>
     </div>
+    
     <!-- 右下角蓝色长条按钮 -->
     <Button 
       class="absolute bottom-4 right-4 h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg z-10"
@@ -130,6 +141,9 @@ interface PreferredModel {
 const { t } = useI18n()
 const chatStore = useChatStore()
 const settingsStore = useSettingsStore()
+// 添加新的响应式变量来存储自定义文本
+const customText = ref('');
+const customTextError = ref('');
 const activeModel = ref({
   name: '',
   id: '',
@@ -395,6 +409,17 @@ onMounted(async () => {
   })
   // 组件激活时初始化一次默认模型
   await initActiveModel()
+  
+  // 尝试从根目录的custom-welcome.txt文件读取自定义欢迎文本
+  try {
+    const fileContent = await window.api.readLocalFile('custom-welcome.txt');
+    if (fileContent) {
+      customText.value = fileContent.trim();
+    }
+  } catch (error) {
+    console.error('读取自定义欢迎文本失败:', error);
+    customTextError.value = '无法读取自定义欢迎文本';
+  }
 })
 
 const handleActionButtonClick = async () => {
