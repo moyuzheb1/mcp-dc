@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full w-full flex flex-col items-center justify-start">
+  <div class="h-full w-full flex flex-col items-center justify-start relative">
     <div class="h-0 w-full grow flex flex-col items-center justify-center">
       <img src="@/assets/logo-dark.png" class="w-24 h-24" loading="lazy" />
       <h1 class="text-2xl font-bold px-8 pt-4">{{ t('newThread.greeting') }}</h1>
@@ -88,6 +88,14 @@
       </ChatInput>
       <div class="h-12"></div>
     </div>
+    <!-- 右下角蓝色长条按钮 -->
+    <Button 
+      class="absolute bottom-4 right-4 h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg z-10"
+      @click="handleActionButtonClick"
+    >
+      <Icon icon="lucide:magic-wand" class="h-4 w-4 mr-2" />
+      <span>功能待定</span>
+    </Button>
   </div>
 </template>
 
@@ -388,6 +396,38 @@ onMounted(async () => {
   // 组件激活时初始化一次默认模型
   await initActiveModel()
 })
+
+const handleActionButtonClick = async () => {
+  try {
+    // 移除对Node.js process对象的依赖，直接使用fetch API读取文件
+    // 2. 尝试使用fetch API读取文件 (在开发模式下可行)
+    const response = await fetch('http://localhost:5173/message.txt');
+    
+    if (!response.ok) {
+      throw new Error(`无法读取文件: ${response.statusText}`);
+    }
+    
+    const fileContent = await response.text();
+    
+    if (fileContent) {
+      console.log('读取到的消息内容:', fileContent);
+      // 调用handleSend函数发送读取到的消息
+      await handleSend({
+        text: fileContent,
+        files: [],
+        links: [],
+        think: false,
+        search: false
+      });
+    } else {
+      console.error('文件内容为空');
+      alert('消息文件内容为空，请检查项目根目录下的message.txt文件');
+    }
+  } catch (error) {
+    console.error('读取文件并发送消息时出错:', error);
+    alert(`读取或发送消息失败: ${(error as Error).message || '未知错误'}`);
+  }
+};
 
 const handleSend = async (content: UserMessageContent) => {
   const threadId = await chatStore.createThread(content.text, {
