@@ -4,13 +4,11 @@ declare global {
   interface Window {
     electron: ElectronAPI
     api: {
-      copyText(text: string): void
-      copyImage(image: string): void
-      getPathForFile(file: File): string
-      getWindowId(): number | null
-      getWebContentsId(): number
-      openExternal?(url: string): Promise<void>
-    }
-    floatingButtonAPI: typeof floatingButtonAPI
+      copyText: (text: string) => void;
+      copyImage: (image: string) => void;
+      saveImage: (image: string, filename: string) => void;
+      readLocalFile: (fileName: string) => Promise<string>;
+    };
+    floatingButtonAPI: any;
   }
 }

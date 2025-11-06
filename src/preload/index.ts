@@ -41,6 +41,9 @@ const api = {
   },
   openExternal: (url: string) => {
     return shell.openExternal(url)
+  },
+  readLocalFile: async (fileName: string) => {
+    return ipcRenderer.invoke('read-local-file', fileName)
   }
 }
 exposeElectronAPI()

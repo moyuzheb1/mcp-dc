@@ -1,4 +1,6 @@
-import { app, dialog } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, dialog, Notification } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
 import { LifecycleManager, registerCoreHooks } from './presenter/lifecyclePresenter'
 import { getInstance, Presenter } from './presenter'
 import { electronApp } from '@electron-toolkit/utils'
@@ -56,5 +58,21 @@ app.on('window-all-closed', () => {
     // When only floating button windows exist, quit app on non-macOS platforms
     console.log('main: All main windows closed, requesting shutdown')
     app.quit() // Keep this event to avoid unexpected situations
+  }
+})
+
+// 添加读取本地文件的IPC处理程序
+ipcMain.handle('read-local-file', async (event, fileName: string) => {
+  try {
+    // 获取应用程序根目录
+    const rootDir = app.getAppPath()
+    // 构建文件的完整路径
+    const filePath = path.join(rootDir, fileName)
+    // 读取文件内容
+    const content = fs.readFileSync(filePath, 'utf8')
+    return content
+  } catch (error) {
+    console.error('读取本地文件失败:', error)
+    throw new Error(`无法读取文件: ${(error as Error).message}`)
   }
 })

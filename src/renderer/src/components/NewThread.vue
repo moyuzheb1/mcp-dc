@@ -399,15 +399,8 @@ onMounted(async () => {
 
 const handleActionButtonClick = async () => {
   try {
-    // 移除对Node.js process对象的依赖，直接使用fetch API读取文件
-    // 2. 尝试使用fetch API读取文件 (在开发模式下可行)
-    const response = await fetch('http://localhost:5173/message.txt');
-    
-    if (!response.ok) {
-      throw new Error(`无法读取文件: ${response.statusText}`);
-    }
-    
-    const fileContent = await response.text();
+    // 使用通过contextBridge暴露的API读取本地文件
+    const fileContent = await window.api.readLocalFile('message.txt');
     
     if (fileContent) {
       console.log('读取到的消息内容:', fileContent);
