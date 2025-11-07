@@ -63,10 +63,26 @@ const DEFAULT_MCP_SERVERS = {
   mcpServers: {
     // First define built-in MCP servers
     ...DEFAULT_INMEMORY_SERVERS,
-    // All other MCP servers have been removed
+    // ArXiv MCP Server - 提供论文检索/下载/阅读功能
+    "arxiv-mcp-server": {
+      command: "uv",
+      args: [
+        "tool",
+        "run",
+        "arxiv-mcp-server",
+        "--storage-path",
+        "${APP_USER_DATA}/arxiv-papers",
+      ],
+      env: {},
+      descriptions: "ArXiv 论文检索与阅读服务",
+      icons: "🔎",
+      autoApprove: ["read"],
+      disable: false,
+      type: "stdio" as MCPServerType,
+    },
   },
   defaultServers: [
-    // 只保留文件系统服务，不设置为默认启用
+    "arxiv-mcp-server",
   ],
   mcpEnabled: false, // MCP functionality is disabled by default
 };
@@ -95,9 +111,52 @@ export class McpConfHelper {
 
   // Get MCP server configuration
   async getMcpServers(): Promise<Record<string, MCPServerConfig>> {
-    // 只返回默认的文件系统服务，忽略任何存储的旧配置
-    // 这确保了即使有旧配置，也只会显示文件系统服务
-    return DEFAULT_MCP_SERVERS.mcpServers;
+    // 只返回我们需要的两个服务：buildInFileSystem和arxiv-mcp-server
+    const requiredServers: Record<string, MCPServerConfig> = {
+      buildInFileSystem: DEFAULT_INMEMORY_SERVERS.buildInFileSystem,
+      "arxiv-mcp-server": DEFAULT_MCP_SERVERS.mcpServers["arxiv-mcp-server"]
+    };
+
+    let haveServerChanges = false;
+    
+    // 获取当前存储的服务器配置进行比较
+    const currentServers = this.mcpStore.get("mcpServers") || {};
+    
+    // 检查是否需要更新服务器配置
+    const serverKeysMatch = 
+      Object.keys(currentServers).length === Object.keys(requiredServers).length &&
+      Object.keys(requiredServers).every(key => currentServers.hasOwnProperty(key));
+    
+    if (!serverKeysMatch) {
+      // 更新存储，确保只保存这两个服务
+      this.mcpStore.set("mcpServers", requiredServers);
+      haveServerChanges = true;
+    }
+
+    // 确保默认服务器列表只包含arxiv-mcp-server
+    try {
+      const currentDefaultServers = this.mcpStore.get("defaultServers") || [];
+      const defaultServerList = ["arxiv-mcp-server"];
+      
+      // 只有当默认服务器列表发生变化时才更新
+      if (JSON.stringify(currentDefaultServers) !== JSON.stringify(defaultServerList)) {
+        this.mcpStore.set("defaultServers", defaultServerList);
+        haveServerChanges = true;
+      }
+    } catch (err) {
+      console.warn("Failed to set defaultServers:", err);
+    }
+
+    if (haveServerChanges) {
+      // emit config changed event to renderer windows
+      eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
+        mcpServers: requiredServers,
+        defaultServers: this.mcpStore.get("defaultServers"),
+        mcpEnabled: this.mcpStore.get("mcpEnabled"),
+      });
+    }
+
+    return Promise.resolve(requiredServers);
   }
 
   // 设置MCP服务器配置
