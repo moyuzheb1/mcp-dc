@@ -119,174 +119,6 @@ const DEFAULT_INMEMORY_SERVERS: Record<string, MCPServerConfig> = {
     env: {},
     disable: true,
   },
-  Artifacts: {
-    args: [],
-    descriptions: "DeepChat内置 artifacts mcp服务",
-    icons: "🎨",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "artifacts",
-    env: {},
-    disable: false,
-  },
-  bochaSearch: {
-    args: [],
-    descriptions: "DeepChat内置博查搜索服务",
-    icons: "🔍",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "bochaSearch",
-    env: {
-      apiKey: "YOUR_BOCHA_API_KEY", // User needs to provide actual API Key
-    },
-    disable: false,
-  },
-  braveSearch: {
-    args: [],
-    descriptions: "DeepChat内置Brave搜索服务",
-    icons: "🦁",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "braveSearch",
-    env: {
-      apiKey: "YOUR_BRAVE_API_KEY", // User needs to provide actual API Key
-    },
-    disable: false,
-  },
-  difyKnowledge: {
-    args: [],
-    descriptions: "DeepChat内置Dify知识库检索服务",
-    icons: "📚",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "difyKnowledge",
-    env: {
-      configs: [
-        {
-          description: "this is a description for the current knowledge base",
-          apiKey: "YOUR_DIFY_API_KEY",
-          datasetId: "YOUR_DATASET_ID",
-          endpoint: "http://localhost:3000/v1",
-        },
-      ],
-    },
-    disable: false,
-  },
-  imageServer: {
-    args: [],
-    descriptions: "Image processing MCP service",
-    icons: "🖼️",
-    autoApprove: ["read_image_base64", "read_multiple_images_base64"], // Auto-approve reading, require confirmation for uploads
-    type: "inmemory" as MCPServerType,
-    command: "image", // We need to map this command to the ImageServer class later
-    env: {},
-    disable: false,
-  },
-  powerpack: {
-    args: [],
-    descriptions: "DeepChat内置增强工具包",
-    icons: "🛠️",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "powerpack",
-    env: {},
-    disable: false,
-  },
-  ragflowKnowledge: {
-    args: [],
-    descriptions: "DeepChat内置RAGFlow知识库检索服务",
-    icons: "📚",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "ragflowKnowledge",
-    env: {
-      configs: [
-        {
-          description: "默认RAGFlow知识库",
-          apiKey: "YOUR_RAGFLOW_API_KEY",
-          datasetIds: ["YOUR_DATASET_ID"],
-          endpoint: "http://localhost:8000",
-        },
-      ],
-    },
-    disable: false,
-  },
-  fastGptKnowledge: {
-    args: [],
-    descriptions: "DeepChat内置FastGPT知识库检索服务",
-    icons: "📚",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "fastGptKnowledge",
-    env: {
-      configs: [
-        {
-          description: "this is a description for the current knowledge base",
-          apiKey: "YOUR_FastGPT_API_KEY",
-          datasetId: "YOUR_DATASET_ID",
-          endpoint: "http://localhost:3000/api",
-        },
-      ],
-    },
-    disable: false,
-  },
-  builtinKnowledge: {
-    args: [],
-    descriptions: "DeepChat内置知识库检索服务",
-    icons: "📚",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "builtinKnowledge",
-    env: {
-      configs: [],
-    },
-    disable: false,
-  },
-  "deepchat-inmemory/deep-research-server": {
-    args: [],
-    descriptions:
-      "DeepChat内置深度研究服务，使用博查搜索(注意该服务需要较长的上下文模型，请勿在短上下文的模型中使用)",
-    icons: "🔬",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "deepchat-inmemory/deep-research-server",
-    env: {
-      BOCHA_API_KEY: "YOUR_BOCHA_API_KEY",
-    },
-    disable: false,
-  },
-  "deepchat-inmemory/auto-prompting-server": {
-    args: [],
-    descriptions: "DeepChat内置自动模板提示词服务",
-    icons: "📜",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "deepchat-inmemory/auto-prompting-server",
-    env: {},
-    disable: false,
-  },
-  "deepchat-inmemory/conversation-search-server": {
-    args: [],
-    descriptions: "DeepChat built-in conversation history search service",
-    icons: "🔍",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "deepchat-inmemory/conversation-search-server",
-    env: {},
-    disable: false,
-  },
-  "deepchat-inmemory/meeting-server": {
-    args: [],
-    descriptions: "DeepChat内置会议服务，用于组织多Agent讨论",
-    icons: "👥",
-    autoApprove: ["all"],
-    type: "inmemory" as MCPServerType,
-    command: "deepchat-inmemory/meeting-server",
-    env: {},
-    disable: false,
-  },
-  // Merge platform-specific services
-  ...PLATFORM_SPECIFIC_SERVERS,
 };
 
 const DEFAULT_MCP_SERVERS = {
@@ -310,23 +142,9 @@ const DEFAULT_MCP_SERVERS = {
       disable: false,
       type: "stdio" as MCPServerType,
     },
-    // Then default third-party MCP servers
-    memory: {
-      command: "npx",
-      args: ["-y", "@modelcontextprotocol/server-memory"],
-      env: {},
-      descriptions: "内存存储服务",
-      icons: "🧠",
-      autoApprove: ["all"],
-      disable: true,
-      type: "stdio" as MCPServerType,
-    },
   },
   defaultServers: [
-    "Artifacts",
     "arxiv-mcp-server",
-    // Add platform-specific services enabled by default based on platform
-    ...(isMacOS() ? ["deepchat/apple-server"] : []),
   ],
   mcpEnabled: false, // MCP functionality is disabled by default
 };
@@ -355,109 +173,36 @@ export class McpConfHelper {
 
   // Get MCP server configuration
   async getMcpServers(): Promise<Record<string, MCPServerConfig>> {
-    const storedServers =
-      this.mcpStore.get("mcpServers") || DEFAULT_MCP_SERVERS.mcpServers;
+    // 只返回我们需要的两个服务：buildInFileSystem和arxiv-mcp-server
+    const requiredServers: Record<string, MCPServerConfig> = {
+      buildInFileSystem: DEFAULT_INMEMORY_SERVERS.buildInFileSystem,
+      "arxiv-mcp-server": DEFAULT_MCP_SERVERS.mcpServers["arxiv-mcp-server"]
+    };
 
-    // 检查并补充缺少的inmemory服务
-    const updatedServers = { ...storedServers };
+    // 更新存储，确保只保存这两个服务
+    this.mcpStore.set("mcpServers", requiredServers);
+    let haveServerChanges = true;
 
-    // 遍历所有默认的inmemory服务，确保它们都存在
-    for (const [serverName, serverConfig] of Object.entries(
-      DEFAULT_INMEMORY_SERVERS,
-    )) {
-      if (!updatedServers[serverName]) {
-        console.log(`Adding missing inmemory service: ${serverName}`);
-        updatedServers[serverName] = serverConfig;
-      }
-    }
 
-    // 补充 DEFAULT_MCP_SERVERS 中的默认第三方/外部服务（例如 arxiv-mcp-server）
-    for (const [serverName, serverConfig] of Object.entries(
-      DEFAULT_MCP_SERVERS.mcpServers,
-    )) {
-      if (!updatedServers[serverName]) {
-        console.log(`Adding missing default MCP service: ${serverName}`);
-        updatedServers[serverName] = serverConfig;
-      }
-    }
-
-    // 移除不支持当前平台的服务
-    const serversToRemove: string[] = [];
-    for (const [serverName, serverConfig] of Object.entries(updatedServers)) {
-      if (serverConfig.type === "inmemory") {
-        // 检查是否为平台特有服务
-        if (serverName === "deepchat/apple-server" && !isMacOS()) {
-          serversToRemove.push(serverName);
-        }
-        // 可以在这里添加其他平台特有服务的检查
-        // if (serverName === 'deepchat-inmemory/windows-server' && !isWindows()) {
-        //   serversToRemove.push(serverName)
-        // }
-        // if (serverName === 'deepchat-inmemory/linux-server' && !isLinux()) {
-        //   serversToRemove.push(serverName)
-        // }
-      }
-    }
-
-    // 移除不支持的平台特有服务
-    for (const serverName of serversToRemove) {
-      console.log(
-        `Removing service not supported on current platform: ${serverName}`,
-      );
-      delete updatedServers[serverName];
-    }
-
-    // 移除不兼容的服务
-    const builtinKnowledgeSupported =
-      await presenter.knowledgePresenter.isSupported();
-    if (!builtinKnowledgeSupported) {
-      console.warn(
-        "Built-in knowledge base service is not supported in current environment, removing related services",
-      );
-      delete updatedServers.builtinKnowledge;
-    }
-
-    // 如果有变化，更新存储
-    let haveServerChanges = false;
-    if (
-      Object.keys(updatedServers).length !==
-        Object.keys(storedServers).length ||
-      serversToRemove.length > 0
-    ) {
-      this.mcpStore.set("mcpServers", updatedServers);
-      haveServerChanges = true;
-    }
-
-    // 如果默认服务器列表缺少 DEFAULT_MCP_SERVERS 中的默认项，则合并到存储的 defaultServers
+    // 确保默认服务器列表只包含arxiv-mcp-server
     try {
-      const storedDefaultServers: string[] =
-        this.mcpStore.get("defaultServers") || [];
-      const platformAwareDefaults = DEFAULT_MCP_SERVERS.defaultServers;
-      const missingDefaults = platformAwareDefaults.filter(
-        (name) => !storedDefaultServers.includes(name),
-      );
-      if (missingDefaults.length > 0) {
-        const newDefaults = [...storedDefaultServers, ...missingDefaults];
-        this.mcpStore.set("defaultServers", newDefaults);
-        console.log(
-          `Merged missing defaultServers: ${missingDefaults.join(", ")}`,
-        );
-        haveServerChanges = true;
-      }
+      const defaultServerList = ["arxiv-mcp-server"];
+      this.mcpStore.set("defaultServers", defaultServerList);
+      haveServerChanges = true;
     } catch (err) {
-      console.warn("Failed to merge defaultServers:", err);
+      console.warn("Failed to set defaultServers:", err);
     }
 
     if (haveServerChanges) {
       // emit config changed event to renderer windows
       eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
-        mcpServers: this.mcpStore.get("mcpServers"),
+        mcpServers: requiredServers,
         defaultServers: this.mcpStore.get("defaultServers"),
         mcpEnabled: this.mcpStore.get("mcpEnabled"),
       });
     }
 
-    return Promise.resolve(updatedServers);
+    return Promise.resolve(requiredServers);
   }
 
   // 设置MCP服务器配置
