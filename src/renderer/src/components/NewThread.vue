@@ -424,14 +424,18 @@ onMounted(async () => {
 
 const handleActionButtonClick = async () => {
   try {
-    // 使用通过contextBridge暴露的API读取本地文件
-    const fileContent = await window.api.readLocalFile('message.txt');
+    // 使用通过contextBridge暴露的API读取user-preferences.txt文件
+    const fileContent = await window.api.readLocalFile('user-preferences.txt');
     
     if (fileContent) {
-      console.log('读取到的消息内容:', fileContent);
-      // 调用handleSend函数发送读取到的消息
+      console.log('读取到的偏好内容:', fileContent);
+      // 构建查询消息
+      const queryMessage = `请你用arxiv-mcp-server的工具查找三篇和${fileContent}有关的论文，要新一点`;
+      console.log('构建的查询消息:', queryMessage);
+      
+      // 调用handleSend函数发送构建的查询消息
       await handleSend({
-        text: fileContent,
+        text: queryMessage,
         files: [],
         links: [],
         think: false,
@@ -439,7 +443,7 @@ const handleActionButtonClick = async () => {
       });
     } else {
       console.error('文件内容为空');
-      alert('消息文件内容为空，请检查项目根目录下的message.txt文件');
+      alert('用户偏好文件内容为空，请检查项目根目录下的user-preferences.txt文件');
     }
   } catch (error) {
     console.error('读取文件并发送消息时出错:', error);

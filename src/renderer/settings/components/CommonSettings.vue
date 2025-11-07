@@ -27,6 +27,7 @@
         @update:model-value="handleCopyWithCotChange"
       />
       <LoggingSettingsSection />
+      <UserPreferencesSection />
     </div>
   </ScrollArea>
 </template>
@@ -43,6 +44,7 @@ import SearchAssistantModelSection from './common/SearchAssistantModelSection.vu
 import ProxySettingsSection from './common/ProxySettingsSection.vue'
 import LoggingSettingsSection from './common/LoggingSettingsSection.vue'
 import SettingToggleRow from './common/SettingToggleRow.vue'
+import UserPreferencesSection from './common/UserPreferencesSection.vue'
 
 const { t } = useI18n()
 const settingsStore = useSettingsStore()
