@@ -430,7 +430,7 @@ const handleActionButtonClick = async () => {
     if (fileContent) {
       console.log('读取到的偏好内容:', fileContent);
       // 构建查询消息
-      const queryMessage = `请你用arxiv-mcp-server的工具查找三篇和${fileContent}有关的论文，要新一点`;
+      const queryMessage = `请你用arxiv-mcp-server的工具查找三篇和${fileContent}有关的论文，要新一点，sort_by参数为date。你的回答应该遵循以下格式，每行开头加粗：标题：此处为对应标题\n摘要：此处为对应摘要，中文，控制在二十字以内\n链接：此处为对应论文链接`;
       console.log('构建的查询消息:', queryMessage);
       
       // 调用handleSend函数发送构建的查询消息
