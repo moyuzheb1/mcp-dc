@@ -131,6 +131,15 @@
         </CollapsibleContent>
       </Collapsible>
       <Separator class="mt-2" />
+      <!-- 当用户未配置默认服务器但存在已配置服务器时显示提示 -->
+      <div v-if="showDefaultAllEnabledHint" class="mt-2 px-4">
+        <div class="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-900">
+          <div class="font-medium mb-1">默认启用所有 MCP 服务</div>
+          <div class="text-xs">
+            当前未指定默认 MCP 服务器，系统将默认启用所有已配置的 MCP 服务。若要停用某个服务，请在下方服务器列表中关闭它或移除默认设置。
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 服务器列表 -->
@@ -178,6 +187,7 @@ const { toast } = useToast()
 
 // 计算属性
 const mcpEnabled = computed(() => mcpStore.mcpEnabled)
+const showDefaultAllEnabledHint = computed(() => mcpStore.showDefaultAllEnabledHint)
 
 // NPM Registry 相关状态
 const npmRegistryStatus = ref<{

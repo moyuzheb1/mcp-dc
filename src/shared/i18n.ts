@@ -295,8 +295,8 @@ export function getBestMatchTranslation(
  * @param locale Language code
  * @returns Context menu translations
  */
-export function getContextMenuLabels(locale: string): TranslationMap {
-  return getBestMatchTranslation(locale, contextMenuTranslations);
+export function getContextMenuLabels(_locale: string): TranslationMap {
+  return getBestMatchTranslation(_locale, contextMenuTranslations);
 }
 
 /**
@@ -304,6 +304,6 @@ export function getContextMenuLabels(locale: string): TranslationMap {
  * @param locale Language code
  * @returns Error message translations
  */
-export function getErrorMessageLabels(locale: string): TranslationMap {
-  return getBestMatchTranslation(locale, errorMessageTranslations);
+export function getErrorMessageLabels(_locale: string): TranslationMap {
+  return getBestMatchTranslation(_locale, errorMessageTranslations);
 }

@@ -3,6 +3,8 @@ import { MCPServerConfig } from "@shared/presenter";
 import { MCP_EVENTS } from "@/events";
 import ElectronStore from "electron-store";
 import { app } from "electron";
+import { compare } from "compare-versions";
+import { presenter } from "..";
 
 // NPM Registry cache interface
 export interface INpmRegistryCache {

@@ -20,6 +20,7 @@ import { getErrorMessageLabels } from "@shared/i18n";
 import { OpenAI } from "openai";
 import { ToolListUnion, Type, FunctionDeclaration } from "@google/genai";
 import { presenter } from "@/presenter";
+import { app } from "electron";
 
 // Define MCP tool interface
 interface MCPTool {
@@ -120,11 +121,31 @@ export class McpPresenter implements IMCPPresenter {
         );
       }
 
-      // Ensure we only have the file system service
-      await this.configPresenter?.getMcpConfHelper().resetToDefaultServers();
-      console.log(
-        "[MCP] Ensured configuration contains only file system service",
-      );
+      // Load configuration (fetch servers first so any defaults injected by
+      // getMcpServers are persisted before we read defaultServers)
+      const servers = await this.configPresenter.getMcpServers();
+      const defaultServersFromConfig =
+        await this.configPresenter.getMcpDefaultServers();
+
+      // If user hasn't specified any default servers, treat all configured servers as defaults
+      // so that MCP services are enabled by default. Users can still disable individual servers
+      // via the UI/config later.
+      const defaultServers =
+        Array.isArray(defaultServersFromConfig) &&
+        defaultServersFromConfig.length > 0
+          ? defaultServersFromConfig
+          : Object.keys(servers || {});
+
+      // Provide APP_USER_DATA env var for servers that use ${APP_USER_DATA} in args
+      try {
+        const userDataPath = app.getPath("userData");
+        if (userDataPath) {
+          process.env.APP_USER_DATA = userDataPath;
+          console.info(`[MCP] Set APP_USER_DATA to ${userDataPath}`);
+        }
+      } catch (e) {
+        console.warn("[MCP] Failed to set APP_USER_DATA env var:", e);
+      }
 
       // Initialize npm registry (prefer cache if available)
       console.log("[MCP] Initializing npm registry...");
@@ -137,19 +158,60 @@ export class McpPresenter implements IMCPPresenter {
         console.error("[MCP] npm registry initialization failed:", error);
       }
 
-      // Check if MCP is enabled
-      const enabled = await this.configPresenter.getMcpEnabled();
-      if (enabled) {
-        console.log("[MCP] MCP is enabled with file system service only");
+      // Check and start deepchat-inmemory/custom-prompts-server
+      const customPromptsServerName = "deepchat-inmemory/custom-prompts-server";
+      if (servers[customPromptsServerName]) {
+        console.log(
+          `[MCP] Attempting to start custom prompts server: ${customPromptsServerName}`,
+        );
 
-        // Only focus on file system service
-        const servers = await this.configPresenter.getMcpServers();
-        const fileSystemServerName = "buildInFileSystem";
-
-        if (servers[fileSystemServerName]) {
+        try {
+          await this.serverManager.startServer(customPromptsServerName);
           console.log(
-            `[MCP] Configured with file system service: ${fileSystemServerName}`,
+            `[MCP] Custom prompts server ${customPromptsServerName} started successfully`,
           );
+
+          // Notify renderer process that server has started
+          eventBus.send(
+            MCP_EVENTS.SERVER_STARTED,
+            SendTarget.ALL_WINDOWS,
+            customPromptsServerName,
+          );
+        } catch (error) {
+          console.error(
+            `[MCP] Failed to start custom prompts server ${customPromptsServerName}:`,
+            error,
+          );
+        }
+      }
+
+      // If there are default servers, attempt to start them
+      if (defaultServers.length > 0) {
+        for (const serverName of defaultServers) {
+          if (servers[serverName]) {
+            console.log(
+              `[MCP] Attempting to start default server: ${serverName}`,
+            );
+
+            try {
+              await this.serverManager.startServer(serverName);
+              console.log(
+                `[MCP] Default server ${serverName} started successfully`,
+              );
+
+              // Notify renderer process that server has started
+              eventBus.send(
+                MCP_EVENTS.SERVER_STARTED,
+                SendTarget.ALL_WINDOWS,
+                serverName,
+              );
+            } catch (error) {
+              console.error(
+                `[MCP] Failed to start default server ${serverName}:`,
+                error,
+              );
+            }
+          }
         }
       } else {
         console.log("[MCP] MCP is disabled");

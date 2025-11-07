@@ -1,4 +1,4 @@
-import { app, ipcMain, dialog, BrowserWindow } from "electron";
+import { app, ipcMain, dialog } from "electron";
 import * as fs from "fs";
 import * as path from "path";
 import {
@@ -7,6 +7,7 @@ import {
 } from "./presenter/lifecyclePresenter";
 import { getInstance, Presenter } from "./presenter";
 import { electronApp } from "@electron-toolkit/utils";
+const { BrowserWindow } = require("electron");
 
 // Set application command line arguments
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required"); // Allow video autoplay
@@ -70,6 +71,7 @@ app.on("window-all-closed", () => {
 // 添加获取窗口ID的IPC处理程序
 ipcMain.on("get-window-id", (event) => {
   const window = BrowserWindow.fromWebContents(event.sender);
+
   event.returnValue = window?.id || 0;
 });
 
