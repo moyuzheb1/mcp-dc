@@ -81,9 +81,7 @@ const DEFAULT_MCP_SERVERS = {
       type: "stdio" as MCPServerType,
     },
   },
-  defaultServers: [
-    "arxiv-mcp-server",
-  ],
+  defaultServers: ["arxiv-mcp-server"],
   mcpEnabled: false, // MCP functionality is disabled by default
 };
 // This part of MCP has system logic to determine whether to enable, not controlled by user configuration, but by software environment
@@ -111,52 +109,38 @@ export class McpConfHelper {
 
   // Get MCP server configuration
   async getMcpServers(): Promise<Record<string, MCPServerConfig>> {
-    // 只返回我们需要的两个服务：buildInFileSystem和arxiv-mcp-server
-    const requiredServers: Record<string, MCPServerConfig> = {
-      buildInFileSystem: DEFAULT_INMEMORY_SERVERS.buildInFileSystem,
-      "arxiv-mcp-server": DEFAULT_MCP_SERVERS.mcpServers["arxiv-mcp-server"]
+    // 获取当前存储的服务器配置
+    let servers = this.mcpStore.get("mcpServers") || {};
+
+    // 确保内置服务存在，不覆盖用户自定义的配置
+    const defaultServers = {
+      ...DEFAULT_MCP_SERVERS.mcpServers,
     };
 
-    let haveServerChanges = false;
-    
-    // 获取当前存储的服务器配置进行比较
-    const currentServers = this.mcpStore.get("mcpServers") || {};
-    
-    // 检查是否需要更新服务器配置
-    const serverKeysMatch = 
-      Object.keys(currentServers).length === Object.keys(requiredServers).length &&
-      Object.keys(requiredServers).every(key => currentServers.hasOwnProperty(key));
-    
-    if (!serverKeysMatch) {
-      // 更新存储，确保只保存这两个服务
-      this.mcpStore.set("mcpServers", requiredServers);
-      haveServerChanges = true;
-    }
-
-    // 确保默认服务器列表只包含arxiv-mcp-server
-    try {
-      const currentDefaultServers = this.mcpStore.get("defaultServers") || [];
-      const defaultServerList = ["arxiv-mcp-server"];
-      
-      // 只有当默认服务器列表发生变化时才更新
-      if (JSON.stringify(currentDefaultServers) !== JSON.stringify(defaultServerList)) {
-        this.mcpStore.set("defaultServers", defaultServerList);
-        haveServerChanges = true;
+    // 合并默认服务和用户自定义服务，保留用户自定义配置
+    // 只添加不存在的内置服务，不覆盖已存在的服务配置
+    Object.keys(defaultServers).forEach((serverName) => {
+      if (!servers[serverName]) {
+        servers[serverName] = defaultServers[serverName];
       }
-    } catch (err) {
-      console.warn("Failed to set defaultServers:", err);
-    }
+    });
 
-    if (haveServerChanges) {
-      // emit config changed event to renderer windows
+    // 检查是否需要保存更新后的服务器配置
+    const needsUpdate = Object.keys(defaultServers).some((serverName) => {
+      return !this.mcpStore.get(`mcpServers.${serverName}`);
+    });
+
+    if (needsUpdate) {
+      this.mcpStore.set("mcpServers", servers);
+      // 发送配置更改事件
       eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
-        mcpServers: requiredServers,
+        mcpServers: servers,
         defaultServers: this.mcpStore.get("defaultServers"),
         mcpEnabled: this.mcpStore.get("mcpEnabled"),
       });
     }
 
-    return Promise.resolve(requiredServers);
+    return Promise.resolve(servers);
   }
 
   // 设置MCP服务器配置
@@ -379,18 +363,36 @@ export class McpConfHelper {
 
   // 恢复默认服务器配置
   async resetToDefaultServers(): Promise<void> {
-    // 直接使用默认服务器配置，只保留文件系统服务
-    await this.setMcpServers(DEFAULT_MCP_SERVERS.mcpServers);
+    // 获取当前存储的服务器配置
+    const currentServers = this.mcpStore.get("mcpServers") || {};
 
-    // 恢复默认服务器设置，确保平台特有服务的正确处理
-    const platformAwareDefaultServers = [
-      // 只保留文件系统服务，不设置为默认启用
-    ];
+    // 合并默认服务，保留用户自定义的非默认服务
+    const updatedServers = {
+      ...DEFAULT_MCP_SERVERS.mcpServers,
+      // 保留非默认的用户自定义服务
+      ...Object.keys(currentServers)
+        .filter(
+          (key) => !Object.keys(DEFAULT_MCP_SERVERS.mcpServers).includes(key),
+        )
+        .reduce(
+          (acc, key) => {
+            acc[key] = currentServers[key];
+            return acc;
+          },
+          {} as Record<string, MCPServerConfig>,
+        ),
+    };
 
-    this.mcpStore.set("defaultServers", platformAwareDefaultServers);
+    // 设置更新后的服务器配置
+    this.mcpStore.set("mcpServers", updatedServers);
+
+    // 恢复默认服务器设置
+    const defaultDefaultServers = [...DEFAULT_MCP_SERVERS.defaultServers];
+    this.mcpStore.set("defaultServers", defaultDefaultServers);
+
     eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
-      mcpServers: DEFAULT_MCP_SERVERS.mcpServers,
-      defaultServers: platformAwareDefaultServers,
+      mcpServers: updatedServers,
+      defaultServers: defaultDefaultServers,
       mcpEnabled: this.mcpStore.get("mcpEnabled"),
     });
   }
@@ -563,21 +565,42 @@ export class McpConfHelper {
   public onUpgrade(oldVersion: string | undefined): void {
     console.log("onUpgrade", oldVersion);
 
-    // 清理MCP配置，只保留文件系统服务
-    console.log(
-      "Cleaning up MCP configuration, keeping only filesystem service",
-    );
-    const mcpServers = { ...DEFAULT_MCP_SERVERS.mcpServers };
-    this.mcpStore.set("mcpServers", mcpServers);
-    this.mcpStore.set("defaultServers", []);
+    // 获取当前存储的服务器配置
+    const currentServers = this.mcpStore.get("mcpServers") || {};
 
-    // 确保不加载任何平台特有服务
-    console.log("Ensuring no platform-specific services are loaded");
+    // 合并默认服务，保留用户自定义的非默认服务
+    const updatedServers = {
+      ...DEFAULT_MCP_SERVERS.mcpServers,
+      // 保留非默认的用户自定义服务
+      ...Object.keys(currentServers)
+        .filter(
+          (key) => !Object.keys(DEFAULT_MCP_SERVERS.mcpServers).includes(key),
+        )
+        .reduce(
+          (acc, key) => {
+            acc[key] = currentServers[key];
+            return acc;
+          },
+          {} as Record<string, MCPServerConfig>,
+        ),
+    };
+
+    // 设置更新后的服务器配置
+    this.mcpStore.set("mcpServers", updatedServers);
+
+    // 保留现有的默认服务器列表，如果不存在则使用默认值
+    const existingDefaultServers = this.mcpStore.get("defaultServers") || [
+      ...DEFAULT_MCP_SERVERS.defaultServers,
+    ];
+
+    console.log(
+      "Upgraded MCP configuration while preserving user-defined services",
+    );
 
     // 发送配置更改事件
     eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
-      mcpServers: mcpServers,
-      defaultServers: [],
+      mcpServers: updatedServers,
+      defaultServers: existingDefaultServers,
       mcpEnabled: this.mcpStore.get("mcpEnabled"),
     });
   }
