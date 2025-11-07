@@ -77,7 +77,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { Button } from '@shadcn/components/ui/button'
-import { onMounted, watch } from 'vue'
 
 import { useThemeStore } from '@/stores/theme'
 defineProps<{
