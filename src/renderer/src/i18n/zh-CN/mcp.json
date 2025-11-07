@@ -162,69 +162,9 @@
     "arrayItemValues": "数组元素值"
   },
   "inmemory": {
-    "bochaSearch": {
-      "name": "博查搜索",
-      "desc": "博查搜索 API https://open.bochaai.com/"
-    },
     "buildInFileSystem": {
       "name": "文件系统",
       "desc": "让 DeepChat 能够操作本地文件"
-    },
-    "Artifacts": {
-      "name": "Artifacts",
-      "desc": "让你的 DeepChat 输出的多样化的 Artifacts 内容"
-    },
-    "imageServer": {
-      "name": "图片服务",
-      "desc": "开启后 DeepChat 中任意模型都能看懂图片，能生成图片"
-    },
-    "braveSearch": {
-      "name": "Brave搜索",
-      "desc": "Brave搜索 API https://brave.com/search/api/"
-    },
-    "powerpack": {
-      "name": "增强工具包",
-      "desc": "为任意大模型提供时间查询、网页信息获取和安全的代码执行等增强能力，让模型拥有更强大和准确的信息获取能力"
-    },
-    "difyKnowledge": {
-      "name": "Dify知识库检索",
-      "desc": "Dify知识库检索服务，可以检索Dify知识库中的内容"
-    },
-    "ragflowKnowledge": {
-      "name": "RAGFlow知识库检索",
-      "desc": "RAGFlow知识库检索服务，可以对RAGFlow知识库内容进行检索"
-    },
-    "fastGptKnowledge": {
-      "name": "FastGPT知识库检索",
-      "desc": "FastGPT知识库检索服务，可以对FastGPT知识库内容进行检索"
-    },
-    "builtinKnowledge": {
-      "name": "内置知识库检索",
-      "desc": "DeepChat内置知识库检索服务，可以对DeepChat内置知识库内容进行检索"
-    },
-    "deepchat-inmemory/custom-prompts-server": {
-      "name": "自定义提示词",
-      "desc": "DeepChat内置自定义提示词服务"
-    },
-    "deepchat-inmemory/deep-research-server": {
-      "name": "DeepResearch",
-      "desc": "基于博查搜索的DeepChat内置深度研究服务，（注意需要长上下文模型才能使用，上下文不足的模型可能会失败）"
-    },
-    "deepchat-inmemory/auto-prompting-server": {
-      "name": "自动模板提示词",
-      "desc": "根据用户输入自动选择最合适的自定义提示词，并智能填充提示词模板"
-    },
-    "deepchat-inmemory/conversation-search-server": {
-      "name": "对话历史搜索",
-      "desc": "DeepChat内置对话历史搜索服务，可搜索历史对话记录和消息内容"
-    },
-    "deepchat-inmemory/meeting-server": {
-      "name": "多智能体会议",
-      "desc": "DeepChat 内置会议服务，支持发起和主持多智能体讨论"
-    },
-    "deepchat/apple-server": {
-      "name": "macOS系统助手",
-      "desc": "让模型能操作macOS的日历、联系人、邮件、地图、备忘录、提醒事项等系统功能"
     }
   },
   "prompts": {
