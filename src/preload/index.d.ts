@@ -1,13 +1,16 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
+import { ElectronAPI } from "@electron-toolkit/preload";
 
 declare global {
   interface Window {
-    electron: ElectronAPI
+    electron: ElectronAPI;
     api: {
       copyText: (text: string) => void;
       copyImage: (image: string) => void;
       saveImage: (image: string, filename: string) => void;
       readLocalFile: (fileName: string) => Promise<string>;
+      getWindowId: () => number;
+      getWebContentsId: () => number;
+      getPathForFile: (file: File) => string;
     };
     floatingButtonAPI: any;
   }

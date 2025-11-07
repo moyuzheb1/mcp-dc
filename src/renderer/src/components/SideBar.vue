@@ -77,7 +77,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { Button } from '@shadcn/components/ui/button'
-import { onMounted, watch } from 'vue'
+// 移除未使用的导入
 
 import { useThemeStore } from '@/stores/theme'
 defineProps<{

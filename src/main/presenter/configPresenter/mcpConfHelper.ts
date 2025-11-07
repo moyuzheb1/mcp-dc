@@ -3,8 +3,6 @@ import { MCPServerConfig } from "@shared/presenter";
 import { MCP_EVENTS } from "@/events";
 import ElectronStore from "electron-store";
 import { app } from "electron";
-import { compare } from "compare-versions";
-import { presenter } from "..";
 
 // NPM Registry cache interface
 export interface INpmRegistryCache {
@@ -43,69 +41,7 @@ export interface ExtendedMCPServerConfig {
   view_count?: number;
 }
 
-// Check current system platform
-function isMacOS(): boolean {
-  return process.platform === "darwin";
-}
-
-function isWindows(): boolean {
-  return process.platform === "win32";
-}
-
-function isLinux(): boolean {
-  return process.platform === "linux";
-}
-
-// Platform-specific MCP server configurations
-const PLATFORM_SPECIFIC_SERVERS: Record<string, MCPServerConfig> = {
-  // macOS specific services
-  ...(isMacOS()
-    ? {
-        "deepchat/apple-server": {
-          args: [],
-          descriptions: "DeepChat内置Apple系统集成服务 (仅macOS)",
-          icons: "🍎",
-          autoApprove: ["all"],
-          type: "inmemory" as MCPServerType,
-          command: "deepchat/apple-server",
-          env: {},
-          disable: false,
-        },
-      }
-    : {}),
-
-  // Windows specific services (reserved)
-  ...(isWindows()
-    ? {
-        // 'deepchat-inmemory/windows-server': {
-        //   args: [],
-        //   descriptions: 'DeepChat built-in Windows system integration service (Windows only)',
-        //   icons: '🪟',
-        //   autoApprove: ['all'],
-        //   type: 'inmemory' as MCPServerType,
-        //   command: 'deepchat-inmemory/windows-server',
-        //   env: {},
-        //   disable: false
-        // }
-      }
-    : {}),
-
-  // Linux specific services (reserved)
-  ...(isLinux()
-    ? {
-        // 'deepchat-inmemory/linux-server': {
-        //   args: [],
-        //   descriptions: 'DeepChat built-in Linux system integration service (Linux only)',
-        //   icons: '🐧',
-        //   autoApprove: ['all'],
-        //   type: 'inmemory' as MCPServerType,
-        //   command: 'deepchat-inmemory/linux-server',
-        //   env: {},
-        //   disable: false
-        // }
-      }
-    : {}),
-};
+// Platform-specific MCP server configurations - removed unused variable
 
 // Extract inmemory type services as constants
 const DEFAULT_INMEMORY_SERVERS: Record<string, MCPServerConfig> = {
