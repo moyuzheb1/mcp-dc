@@ -179,16 +179,32 @@ export class McpConfHelper {
       "arxiv-mcp-server": DEFAULT_MCP_SERVERS.mcpServers["arxiv-mcp-server"]
     };
 
-    // 更新存储，确保只保存这两个服务
-    this.mcpStore.set("mcpServers", requiredServers);
-    let haveServerChanges = true;
-
+    let haveServerChanges = false;
+    
+    // 获取当前存储的服务器配置进行比较
+    const currentServers = this.mcpStore.get("mcpServers") || {};
+    
+    // 检查是否需要更新服务器配置
+    const serverKeysMatch = 
+      Object.keys(currentServers).length === Object.keys(requiredServers).length &&
+      Object.keys(requiredServers).every(key => currentServers.hasOwnProperty(key));
+    
+    if (!serverKeysMatch) {
+      // 更新存储，确保只保存这两个服务
+      this.mcpStore.set("mcpServers", requiredServers);
+      haveServerChanges = true;
+    }
 
     // 确保默认服务器列表只包含arxiv-mcp-server
     try {
+      const currentDefaultServers = this.mcpStore.get("defaultServers") || [];
       const defaultServerList = ["arxiv-mcp-server"];
-      this.mcpStore.set("defaultServers", defaultServerList);
-      haveServerChanges = true;
+      
+      // 只有当默认服务器列表发生变化时才更新
+      if (JSON.stringify(currentDefaultServers) !== JSON.stringify(defaultServerList)) {
+        this.mcpStore.set("defaultServers", defaultServerList);
+        haveServerChanges = true;
+      }
     } catch (err) {
       console.warn("Failed to set defaultServers:", err);
     }
