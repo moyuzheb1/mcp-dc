@@ -101,11 +101,11 @@
     
     <!-- 右下角蓝色长条按钮 -->
     <Button 
-      class="absolute bottom-4 right-4 h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg z-10"
+      class="absolute bottom-4 right-4 h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg z-10 justify-center"
       @click="handleActionButtonClick"
     >
       <Icon icon="lucide:magic-wand" class="h-4 w-4 mr-2" />
-      <span>功能待定</span>
+      <span>智能推荐</span>
     </Button>
   </div>
 </template>
