@@ -95,3 +95,16 @@ ipcMain.handle("read-local-file", async (_, fileName: string) => {
     throw new Error(`无法读取文件: ${(error as Error).message}`);
   }
 });
+
+// 添加写入本地文件的IPC处理程序（覆盖写入）
+ipcMain.handle("write-local-file", async (_, fileName: string, content: string) => {
+  try {
+    const rootDir = app.getAppPath();
+    const filePath = path.join(rootDir, fileName);
+    fs.writeFileSync(filePath, content, "utf8");
+    return true;
+  } catch (error) {
+    console.error("写入本地文件失败:", error);
+    throw new Error(`无法写入文件: ${(error as Error).message}`);
+  }
+});

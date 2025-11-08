@@ -45,6 +45,10 @@ const api = {
   readLocalFile: async (fileName: string) => {
     return ipcRenderer.invoke('read-local-file', fileName)
   }
+  ,
+  writeLocalFile: async (fileName: string, content: string) => {
+    return ipcRenderer.invoke('write-local-file', fileName, content)
+  }
 }
 exposeElectronAPI()
 

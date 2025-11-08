@@ -1,5 +1,13 @@
 <template>
   <div class="h-full w-full flex flex-col items-center justify-between relative">
+    <!-- 右上角刷新按钮 -->
+    <Button 
+      class="absolute top-4 right-4 h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg z-50 flex items-center justify-center gap-2 w-auto min-w-[120px] text-center"
+      @click="handleRefreshButtonClick"
+    >
+      <Icon icon="lucide:refresh-cw" class="h-4 w-4" />
+      <span>更新内容</span>
+    </Button>
     <div class="w-full grow flex flex-col items-center justify-center px-4">
       <!-- 移除logo图标 -->
       <!-- <img src="@/assets/logo-dark.png" class="w-24 h-24" loading="lazy" /> -->
@@ -101,20 +109,20 @@
     
     <!-- 右下角深绿色按钮 -->
     <Button 
-      class="absolute bottom-4 right-[145px] h-10 px-6 bg-green-800 hover:bg-green-900 text-white rounded-full shadow-lg z-10 flex items-center justify-center gap-2 w-[120px] text-center"
+      class="absolute bottom-4 right-[145px] h-10 px-4 bg-green-800 hover:bg-green-900 text-white rounded-full shadow-lg z-50 flex items-center justify-center gap-2 w-auto min-w-[120px] text-center"
       @click="handleNewsButtonClick"
     >
       <Icon icon="lucide:newspaper" class="h-4 w-4" />
-      <span class="w-full flex justify-center">最新资讯</span>
+      <span>最新资讯</span>
     </Button>
     
     <!-- 右下角蓝色长条按钮 -->
     <Button 
-      class="absolute bottom-4 right-4 h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg z-10 flex items-center justify-center gap-2 w-[120px] text-center"
+      class="absolute bottom-4 right-4 h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg z-50 flex items-center justify-center gap-2 w-auto min-w-[120px] text-center"
       @click="handleActionButtonClick"
     >
       <Icon icon="lucide:sparkle" class="h-4 w-4" />
-      <span class="w-full flex justify-center">智能推荐</span>
+      <span>智能推荐</span>
     </Button>
   </div>
 </template>
@@ -140,6 +148,7 @@ import { useThemeStore } from '@/stores/theme'
 import { ModelType } from '@shared/model'
 
 const configPresenter = usePresenter('configPresenter')
+const threadPresenter = usePresenter('threadPresenter')
 const themeStore = useThemeStore()
 // 定义偏好模型的类型
 interface PreferredModel {
@@ -434,7 +443,7 @@ onMounted(async () => {
 const handleNewsButtonClick = async () => {
   try {
     
-    const queryMessage = "用fetch,url=https://news.aibase.cn/news,max_length=1000,结果只包含五条新闻总结,不要用其他内容";
+    const queryMessage = "用fetch,url=https://news.aibase.cn/news,max_length=1000,结果只包含五条新闻总结,不要有其他内容";
     console.log('发送的消息:', queryMessage);
     
     // 调用handleSend函数发送消息
@@ -479,6 +488,107 @@ const handleActionButtonClick = async () => {
     alert(`读取或发送消息失败: ${(error as Error).message || '未知错误'}`);
   }
 };
+
+// 处理刷新按钮点击事件：
+// 1) 基于用户偏好与抓取到的最新资讯构建查询（通过MCP工具fetch请求），
+// 2) 在新会话中发送该查询，等待助手生成结果，
+// 3) 将生成的文本写入项目根目录的 custom-welcome.txt（覆盖原文件），并更新界面显示。
+const handleRefreshButtonClick = async () => {
+  try {
+    // 读取用户偏好（如果存在）
+    let userPref = '';
+    try {
+      userPref = (await window.api.readLocalFile('user-preferences.txt')) || '';
+    } catch (err) {
+      console.warn('无法读取 user-preferences.txt，继续使用空偏好', err);
+      userPref = '';
+    }
+
+    // 构建综合查询：同时利用新闻抓取工具并结合用户偏好让模型输出欢迎语
+    const combinedQuery = `用fetch,url=https://news.aibase.cn/news,max_length=1000,结果只包含五条新闻总结,不要有其他内容`;
+
+    // 创建一个新会话并发送消息（复用现有配置）
+    const threadId = await chatStore.createThread(combinedQuery, {
+      providerId: activeModel.value.providerId,
+      modelId: activeModel.value.id,
+      systemPrompt: systemPrompt.value,
+      temperature: temperature.value,
+      contextLength: contextLength.value,
+      maxTokens: maxTokens.value,
+      artifacts: artifacts.value as 0 | 1,
+      thinkingBudget: thinkingBudget.value,
+      enableSearch: enableSearch.value,
+      forcedSearch: forcedSearch.value,
+      searchStrategy: searchStrategy.value,
+      reasoningEffort: reasoningEffort.value,
+      verbosity: verbosity.value,
+      enabledMcpTools: chatStore.chatConfig.enabledMcpTools
+    } as any)
+
+    await chatStore.sendMessage({
+      text: combinedQuery,
+      files: [],
+      links: [],
+      think: false,
+      search: false
+    })
+
+    // 辅助函数：从助手消息块中抽取可读文本
+    const extractAssistantText = (assistantMsg: any) => {
+      if (!assistantMsg || !assistantMsg.content) return '';
+      const parts: string[] = [];
+      for (const block of assistantMsg.content) {
+        if (!block) continue;
+        if (block.type === 'content' && block.content) parts.push(block.content);
+        else if (block.type === 'reasoning_content' && block.content) parts.push(block.content);
+        else if (block.type === 'tool_call' && block.tool_call && block.tool_call.response) parts.push(block.tool_call.response);
+        else if (typeof block.content === 'string') parts.push(block.content);
+      }
+      return parts.join('\n').trim();
+    }
+
+    // 等待助手响应（轮询），最多等待 60 秒
+    let assistantText = '';
+    const maxAttempts = 60;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      try {
+        const msgsRes: any = await threadPresenter.getMessages(threadId, 1, 100)
+        const assistantMsg = msgsRes?.list?.find((m: any) => m.role === 'assistant' && m.content && m.content.length > 0)
+        if (assistantMsg) {
+          assistantText = extractAssistantText(assistantMsg)
+          if (assistantText && assistantText.length > 0) break
+        }
+      } catch (err) {
+        console.warn('获取消息时出错，稍候重试', err)
+      }
+    }
+
+    if (!assistantText) {
+      alert('未能在规定时间内获取到生成的欢迎语，请稍后重试。')
+      return
+    }
+
+    // 将结果写入根目录的 custom-welcome.txt（覆盖）
+    try {
+      await window.api.writeLocalFile('custom-welcome.txt', assistantText)
+      customText.value = assistantText
+      customTextError.value = ''
+      // 可选：提醒用户已更新
+      console.log('custom-welcome.txt 已更新')
+    } catch (err) {
+      console.error('写入 custom-welcome.txt 失败:', err)
+      customTextError.value = '无法保存自定义欢迎文本'
+      alert('保存失败，请检查应用是否有写入权限')
+    }
+  } catch (error) {
+    console.error('刷新按钮处理失败:', error)
+    alert(`刷新失败: ${(error as Error).message || '未知错误'}`)
+  }
+}
+
+// 直接使用chatStore中的数据，不需要自定义函数来获取历史记录
+// 下面的函数在handleRefreshButtonClick中直接使用chatStore数据
 
 const handleSend = async (content: UserMessageContent) => {
   const threadId = await chatStore.createThread(content.text, {
