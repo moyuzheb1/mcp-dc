@@ -99,13 +99,22 @@
       </ChatInput>
     </div>
     
+    <!-- 右下角深绿色按钮 -->
+    <Button 
+      class="absolute bottom-4 right-[145px] h-10 px-6 bg-green-800 hover:bg-green-900 text-white rounded-full shadow-lg z-10 flex items-center justify-center gap-2 w-[120px] text-center"
+      @click="handleNewsButtonClick"
+    >
+      <Icon icon="lucide:newspaper" class="h-4 w-4" />
+      <span class="w-full flex justify-center">最新资讯</span>
+    </Button>
+    
     <!-- 右下角蓝色长条按钮 -->
     <Button 
-      class="absolute bottom-4 right-4 h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg z-10 justify-center"
+      class="absolute bottom-4 right-4 h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg z-10 flex items-center justify-center gap-2 w-[120px] text-center"
       @click="handleActionButtonClick"
     >
-      <Icon icon="lucide:magic-wand" class="h-4 w-4 mr-2" />
-      <span>智能推荐</span>
+      <Icon icon="lucide:sparkle" class="h-4 w-4" />
+      <span class="w-full flex justify-center">智能推荐</span>
     </Button>
   </div>
 </template>
@@ -421,6 +430,26 @@ onMounted(async () => {
     customTextError.value = '无法读取自定义欢迎文本';
   }
 })
+
+const handleNewsButtonClick = async () => {
+  try {
+    
+    const queryMessage = "用fetch,url=https://news.aibase.cn/news,max_length=1000,结果只包含五条新闻总结,不要用其他内容";
+    console.log('发送的消息:', queryMessage);
+    
+    // 调用handleSend函数发送消息
+    await handleSend({
+      text: queryMessage,
+      files: [],
+      links: [],
+      think: false,
+      search: false
+    });
+  } catch (error) {
+    console.error('发送消息时出错:', error);
+    alert(`发送消息失败: ${(error as Error).message || '未知错误'}`);
+  }
+};
 
 const handleActionButtonClick = async () => {
   try {

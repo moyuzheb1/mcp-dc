@@ -1,1 +1,4 @@
-computer vision
+cs.CV
+cs.AI
+cs.LG
+cs.NE
