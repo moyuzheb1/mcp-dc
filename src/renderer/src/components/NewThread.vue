@@ -494,96 +494,125 @@ const handleActionButtonClick = async () => {
 // 2) 在新会话中发送该查询，等待助手生成结果，
 // 3) 将生成的文本写入项目根目录的 custom-welcome.txt（覆盖原文件），并更新界面显示。
 const handleRefreshButtonClick = async () => {
+  console.log('刷新按钮被点击');
   try {
     // 读取用户偏好（如果存在）
     let userPref = '';
     try {
       userPref = (await window.api.readLocalFile('user-preferences.txt')) || '';
+      console.log('读取到的用户偏好:', userPref);
     } catch (err) {
       console.warn('无法读取 user-preferences.txt，继续使用空偏好', err);
       userPref = '';
     }
 
-    // 构建综合查询：同时利用新闻抓取工具并结合用户偏好让模型输出欢迎语
-    const combinedQuery = `用fetch,url=https://news.aibase.cn/news,max_length=1000,结果只包含五条新闻总结,不要有其他内容`;
+    // 构建综合查询
+    const combinedQuery = `用fetch,url=https://news.aibase.cn/news,max_length=1000,结果只包含五条新闻总结,每条二十字以内,不要有其他内容`;
+    console.log('构建的查询消息:', combinedQuery);
 
-    // 创建一个新会话并发送消息（复用现有配置）
-    const threadId = await chatStore.createThread(combinedQuery, {
-      providerId: activeModel.value.providerId,
-      modelId: activeModel.value.id,
-      systemPrompt: systemPrompt.value,
-      temperature: temperature.value,
-      contextLength: contextLength.value,
-      maxTokens: maxTokens.value,
-      artifacts: artifacts.value as 0 | 1,
-      thinkingBudget: thinkingBudget.value,
-      enableSearch: enableSearch.value,
-      forcedSearch: forcedSearch.value,
-      searchStrategy: searchStrategy.value,
-      reasoningEffort: reasoningEffort.value,
-      verbosity: verbosity.value,
-      enabledMcpTools: chatStore.chatConfig.enabledMcpTools
-    } as any)
-
-    await chatStore.sendMessage({
-      text: combinedQuery,
-      files: [],
-      links: [],
-      think: false,
-      search: false
-    })
-
-    // 辅助函数：从助手消息块中抽取可读文本
-    const extractAssistantText = (assistantMsg: any) => {
-      if (!assistantMsg || !assistantMsg.content) return '';
-      const parts: string[] = [];
-      for (const block of assistantMsg.content) {
-        if (!block) continue;
-        if (block.type === 'content' && block.content) parts.push(block.content);
-        else if (block.type === 'reasoning_content' && block.content) parts.push(block.content);
-        else if (block.type === 'tool_call' && block.tool_call && block.tool_call.response) parts.push(block.tool_call.response);
-        else if (typeof block.content === 'string') parts.push(block.content);
-      }
-      return parts.join('\n').trim();
-    }
-
-    // 等待助手响应（轮询），最多等待 60 秒
-    let assistantText = '';
-    const maxAttempts = 60;
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((r) => setTimeout(r, 1000));
-      try {
-        const msgsRes: any = await threadPresenter.getMessages(threadId, 1, 100)
-        const assistantMsg = msgsRes?.list?.find((m: any) => m.role === 'assistant' && m.content && m.content.length > 0)
-        if (assistantMsg) {
-          assistantText = extractAssistantText(assistantMsg)
-          if (assistantText && assistantText.length > 0) break
-        }
-      } catch (err) {
-        console.warn('获取消息时出错，稍候重试', err)
-      }
-    }
-
-    if (!assistantText) {
-      alert('未能在规定时间内获取到生成的欢迎语，请稍后重试。')
-      return
-    }
-
-    // 将结果写入根目录的 custom-welcome.txt（覆盖）
+    // 为了避免路由跳转，我们直接使用线程服务创建线程，而不经过chatStore可能触发路由跳转的方法
+    const tabId = window.api.getWebContentsId();
+    
+    // 创建线程并保存设置，但不激活该线程以避免路由跳转
     try {
-      await window.api.writeLocalFile('custom-welcome.txt', assistantText)
-      customText.value = assistantText
-      customTextError.value = ''
-      // 可选：提醒用户已更新
-      console.log('custom-welcome.txt 已更新')
-    } catch (err) {
-      console.error('写入 custom-welcome.txt 失败:', err)
-      customTextError.value = '无法保存自定义欢迎文本'
-      alert('保存失败，请检查应用是否有写入权限')
+      const threadId = await threadPresenter.createConversation(
+        '欢迎语刷新', 
+        {
+          providerId: activeModel.value.providerId,
+          modelId: activeModel.value.id,
+          systemPrompt: systemPrompt.value,
+          temperature: temperature.value,
+          contextLength: contextLength.value,
+          maxTokens: maxTokens.value,
+          artifacts: artifacts.value as 0 | 1,
+          thinkingBudget: thinkingBudget.value,
+          enableSearch: enableSearch.value,
+          forcedSearch: forcedSearch.value,
+          searchStrategy: searchStrategy.value,
+          reasoningEffort: reasoningEffort.value,
+          verbosity: verbosity.value,
+          enabledMcpTools: chatStore.chatConfig.enabledMcpTools
+        } as any,
+        tabId
+      );
+      console.log('创建的线程ID:', threadId);
+      
+      // 直接发送消息，不使用chatStore.sendMessage以避免可能的路由跳转
+      const messageContent = JSON.stringify({
+        text: combinedQuery,
+        files: [],
+        links: [],
+        think: false,
+        search: false
+      });
+      
+      // 发送用户消息
+      await threadPresenter.sendMessage(threadId, messageContent, "user");
+      
+      // 启动流完成
+      await threadPresenter.startStreamCompletion(threadId, undefined, {});
+      
+      // 辅助函数：从助手消息块中抽取可读文本
+      const extractAssistantText = (assistantMsg: any) => {
+        if (!assistantMsg || !assistantMsg.content) return '';
+        const parts: string[] = [];
+        for (const block of assistantMsg.content) {
+          if (!block) continue;
+          if (block.type === 'content' && block.content) parts.push(block.content);
+          else if (block.type === 'reasoning_content' && block.content) parts.push(block.content);
+          else if (block.type === 'tool_call' && block.tool_call && block.tool_call.response) parts.push(block.tool_call.response);
+          else if (typeof block.content === 'string') parts.push(block.content);
+        }
+        return parts.join('\n').trim();
+      }
+
+      // 等待助手响应（轮询），最多等待 60 秒
+      let assistantText = '';
+      const maxAttempts = 60;
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        try {
+          const msgsRes: any = await threadPresenter.getMessages(threadId, 1, 100)
+          const assistantMsg = msgsRes?.list?.find((m: any) => m.role === 'assistant' && m.content && m.content.length > 0)
+          if (assistantMsg) {
+            assistantText = extractAssistantText(assistantMsg)
+            if (assistantText && assistantText.length > 0) break
+          }
+        } catch (err) {
+          console.warn('获取消息时出错，稍候重试', err)
+        }
+      }
+
+      // 如果没有获取到响应，使用默认文本
+      if (!assistantText) {
+        console.log('未获取到助手响应，使用默认文本');
+        assistantText = "感谢您的使用！我是您的AI助手，随时为您提供帮助。请随时提问，我会尽力为您解答。";
+      }
+
+      console.log('最终使用的文本:', assistantText);
+      
+      // 将文本写入custom-welcome.txt文件，只保留最后九行
+       try {
+         // 分割文本为行，只保留最后九行
+         const lines = assistantText.split('\n');
+         const lastNineLines = lines.slice(-9).join('\n').trim();
+         
+         await window.api.writeLocalFile('custom-welcome.txt', lastNineLines);
+         customText.value = lastNineLines;
+         customTextError.value = '';
+         console.log('成功写入custom-welcome.txt文件（只保留最后九行）');
+       } catch (error) {
+         console.error('写入custom-welcome.txt文件失败:', error);
+         customTextError.value = '无法写入自定义欢迎文本';
+         alert('保存失败，请检查应用是否有写入权限');
+       }
+    } catch (error) {
+      console.error('处理刷新请求时出错:', error);
+      alert(`刷新失败: ${(error as Error).message || '未知错误'}`);
     }
   } catch (error) {
-    console.error('刷新按钮处理失败:', error)
-    alert(`刷新失败: ${(error as Error).message || '未知错误'}`)
+    console.error('刷新按钮处理失败:', error);
+    alert(`刷新失败: ${(error as Error).message || '未知错误'}`);
   }
 }
 
