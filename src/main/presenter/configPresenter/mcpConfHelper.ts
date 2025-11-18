@@ -3,8 +3,6 @@ import { MCPServerConfig } from "@shared/presenter";
 import { MCP_EVENTS } from "@/events";
 import ElectronStore from "electron-store";
 import { app } from "electron";
-import { compare } from "compare-versions";
-import { presenter } from "..";
 
 // NPM Registry cache interface
 export interface INpmRegistryCache {
@@ -43,8 +41,6 @@ export interface ExtendedMCPServerConfig {
   view_count?: number;
 }
 
-// Platform-specific MCP server configurations - removed unused variable
-
 // Extract inmemory type services as constants
 const DEFAULT_INMEMORY_SERVERS: Record<string, MCPServerConfig> = {
   buildInFileSystem: {
@@ -80,13 +76,25 @@ const DEFAULT_MCP_SERVERS = {
       disable: false,
       type: "stdio" as MCPServerType,
     },
+    // Fetch MCP Server - 提供网络获取功能
+    fetch: {
+      command: "uvx",
+      args: ["mcp-server-fetch"],
+      env: {},
+      descriptions: "网络获取服务",
+      icons: "🌐",
+      autoApprove: ["read"],
+      disable: false, // 设置为false确保默认启用
+      type: "stdio" as MCPServerType,
+    },
   },
-  defaultServers: ["arxiv-mcp-server"],
-  mcpEnabled: false, // MCP functionality is disabled by default
+  defaultServers: ["arxiv-mcp-server", "fetch"],
+  mcpEnabled: true, // MCP functionality is enabled by default
 };
-// This part of MCP has system logic to determine whether to enable, not controlled by user configuration, but by software environment
+
+// System in-memory MCP servers
 export const SYSTEM_INMEM_MCP_SERVERS: Record<string, MCPServerConfig> = {
-  // custom-prompts-server has been removed, now provides prompt functionality through config data source
+  // custom-prompts-server has been removed
 };
 
 export class McpConfHelper {
@@ -111,6 +119,7 @@ export class McpConfHelper {
   async getMcpServers(): Promise<Record<string, MCPServerConfig>> {
     // 获取当前存储的服务器配置
     let servers = this.mcpStore.get("mcpServers") || {};
+    let needsUpdate = false;
 
     // 确保内置服务存在，不覆盖用户自定义的配置
     const defaultServers = {
@@ -118,21 +127,22 @@ export class McpConfHelper {
     };
 
     // 合并默认服务和用户自定义服务，保留用户自定义配置
-    // 只添加不存在的内置服务，不覆盖已存在的服务配置
     Object.keys(defaultServers).forEach((serverName) => {
       if (!servers[serverName]) {
         servers[serverName] = defaultServers[serverName];
+        needsUpdate = true;
       }
     });
 
-    // 检查是否需要保存更新后的服务器配置
-    const needsUpdate = Object.keys(defaultServers).some((serverName) => {
-      return !this.mcpStore.get(`mcpServers.${serverName}`);
-    });
+    // 明确设置fetch服务器为启用状态（确保默认启用）
+    if (servers["fetch"] && servers["fetch"].disable !== false) {
+      servers["fetch"].disable = false;
+      needsUpdate = true;
+    }
 
+    // 只在真正需要更新配置时才保存和发送事件，避免无限循环
     if (needsUpdate) {
       this.mcpStore.set("mcpServers", servers);
-      // 发送配置更改事件
       eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
         mcpServers: servers,
         defaultServers: this.mcpStore.get("defaultServers"),
@@ -145,12 +155,45 @@ export class McpConfHelper {
 
   // 设置MCP服务器配置
   async setMcpServers(servers: Record<string, MCPServerConfig>): Promise<void> {
-    this.mcpStore.set("mcpServers", servers);
-    eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
-      mcpServers: servers,
-      defaultServers: this.mcpStore.get("defaultServers") || [],
-      mcpEnabled: this.mcpStore.get("mcpEnabled"),
-    });
+    // 获取当前存储的配置进行比较
+    const currentServers = this.mcpStore.get("mcpServers") || {};
+    let needsUpdate = false;
+
+    // 确保fetch服务器保持启用状态
+    if (servers["fetch"] && servers["fetch"].disable !== false) {
+      servers["fetch"].disable = false;
+      needsUpdate = true;
+    }
+
+    // 检查配置是否有变化
+    const currentKeys = Object.keys(currentServers);
+    const newKeys = Object.keys(servers);
+
+    // 如果键的数量不同，配置有变化
+    if (currentKeys.length !== newKeys.length) {
+      needsUpdate = true;
+    } else {
+      // 检查每个键的值是否相同
+      for (const key of currentKeys) {
+        if (
+          !newKeys.includes(key) ||
+          JSON.stringify(currentServers[key]) !== JSON.stringify(servers[key])
+        ) {
+          needsUpdate = true;
+          break;
+        }
+      }
+    }
+
+    // 只有在配置真正改变时才保存和发送事件，避免无限循环
+    if (needsUpdate) {
+      this.mcpStore.set("mcpServers", servers);
+      eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
+        mcpServers: servers,
+        defaultServers: this.mcpStore.get("defaultServers") || [],
+        mcpEnabled: this.mcpStore.get("mcpEnabled"),
+      });
+    }
   }
 
   // 获取默认服务器列表
@@ -187,18 +230,13 @@ export class McpConfHelper {
       return;
     }
 
-    // 如果有变化则更新存储并发送事件
-    if (
-      validDefaultServers.length !== defaultServers.length ||
-      !defaultServers.includes(serverName)
-    ) {
-      this.mcpStore.set("defaultServers", validDefaultServers);
-      eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
-        mcpServers: mcpServers,
-        defaultServers: validDefaultServers,
-        mcpEnabled: this.mcpStore.get("mcpEnabled"),
-      });
-    }
+    // 更新存储并发送事件
+    this.mcpStore.set("defaultServers", validDefaultServers);
+    eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
+      mcpServers: mcpServers,
+      defaultServers: validDefaultServers,
+      mcpEnabled: this.mcpStore.get("mcpEnabled"),
+    });
   }
 
   // 移除默认服务器
@@ -354,17 +392,28 @@ export class McpConfHelper {
     if (!mcpServers[name]) {
       throw new Error(`MCP server ${name} not found`);
     }
+
+    // 合并更新
     mcpServers[name] = {
       ...mcpServers[name],
       ...config,
     };
+
+    // 确保fetch服务器始终保持启用状态
+    if (name === "fetch") {
+      mcpServers[name].disable = false;
+    }
+
+    // 无条件更新配置，确保UI能正确显示fetch服务器状态
     await this.setMcpServers(mcpServers);
   }
 
   // 恢复默认服务器配置
   async resetToDefaultServers(): Promise<void> {
-    // 获取当前存储的服务器配置
+    // 获取当前存储的配置
     const currentServers = this.mcpStore.get("mcpServers") || {};
+    const currentDefaultServers = this.mcpStore.get("defaultServers") || [];
+    const currentMcpEnabled = this.mcpStore.get("mcpEnabled") || false;
 
     // 合并默认服务，保留用户自定义的非默认服务
     const updatedServers = {
@@ -383,18 +432,75 @@ export class McpConfHelper {
         ),
     };
 
-    // 设置更新后的服务器配置
-    this.mcpStore.set("mcpServers", updatedServers);
+    // 强制设置fetch服务器为启用状态
+    updatedServers["fetch"] = {
+      ...DEFAULT_MCP_SERVERS.mcpServers["fetch"],
+      disable: false,
+    };
 
-    // 恢复默认服务器设置
     const defaultDefaultServers = [...DEFAULT_MCP_SERVERS.defaultServers];
-    this.mcpStore.set("defaultServers", defaultDefaultServers);
+    const mcpEnabled = true;
 
-    eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
-      mcpServers: updatedServers,
-      defaultServers: defaultDefaultServers,
-      mcpEnabled: this.mcpStore.get("mcpEnabled"),
-    });
+    // 检查配置是否有变化
+    let needsUpdate = false;
+
+    // 检查服务器配置变化
+    const currentServerKeys = Object.keys(currentServers);
+    const updatedServerKeys = Object.keys(updatedServers);
+
+    // 如果键数量不同，配置有变化
+    if (currentServerKeys.length !== updatedServerKeys.length) {
+      needsUpdate = true;
+    } else {
+      // 比较每个服务器配置
+      for (const key of updatedServerKeys) {
+        const current = currentServers[key];
+        const updated = updatedServers[key];
+
+        // 检查fetch服务器的disable状态是否被修改
+        if (
+          key === "fetch" &&
+          (current?.disable !== false || updated.disable !== false)
+        ) {
+          needsUpdate = true;
+          break;
+        }
+
+        // 比较其他服务器配置
+        if (!current || JSON.stringify(current) !== JSON.stringify(updated)) {
+          needsUpdate = true;
+          break;
+        }
+      }
+    }
+
+    // 检查默认服务器列表变化
+    if (
+      !needsUpdate &&
+      JSON.stringify(currentDefaultServers) !==
+        JSON.stringify(defaultDefaultServers)
+    ) {
+      needsUpdate = true;
+    }
+
+    // 检查MCP启用状态变化
+    if (!needsUpdate && currentMcpEnabled !== mcpEnabled) {
+      needsUpdate = true;
+    }
+
+    // 只有当配置有变化时才更新和发送事件
+    if (needsUpdate) {
+      this.mcpStore.set("mcpServers", updatedServers);
+      this.mcpStore.set("defaultServers", defaultDefaultServers);
+      this.mcpStore.set("mcpEnabled", mcpEnabled);
+
+      // 发送配置更改事件
+      eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
+        mcpServers: updatedServers,
+        defaultServers: defaultDefaultServers,
+        mcpEnabled: mcpEnabled,
+      });
+    }
   }
 
   /**
@@ -503,11 +609,14 @@ export class McpConfHelper {
       `MCP batch import completed. Imported: ${result.imported}, Skipped: ${result.skipped}, Errors: ${result.errors.length}`,
     );
 
-    // Emit event to notify about the import
-    eventBus.sendToRenderer(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
-      action: "batch_import",
-      result,
-    });
+    // 只有当有服务器被导入或更新时才发送事件
+    if (result.imported > 0) {
+      // Emit event to notify about the import
+      eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
+        action: "batch_import",
+        result,
+      });
+    }
 
     return result;
   }
@@ -585,6 +694,11 @@ export class McpConfHelper {
         ),
     };
 
+    // 明确设置fetch服务器为启用状态（覆盖可能存在的旧配置）
+    if (updatedServers["fetch"]) {
+      updatedServers["fetch"].disable = false;
+    }
+
     // 设置更新后的服务器配置
     this.mcpStore.set("mcpServers", updatedServers);
 
@@ -592,6 +706,10 @@ export class McpConfHelper {
     const existingDefaultServers = this.mcpStore.get("defaultServers") || [
       ...DEFAULT_MCP_SERVERS.defaultServers,
     ];
+
+    // 确保MCP功能默认启用
+    const mcpEnabled = true;
+    this.mcpStore.set("mcpEnabled", mcpEnabled);
 
     console.log(
       "Upgraded MCP configuration while preserving user-defined services",
@@ -601,7 +719,7 @@ export class McpConfHelper {
     eventBus.send(MCP_EVENTS.CONFIG_CHANGED, SendTarget.ALL_WINDOWS, {
       mcpServers: updatedServers,
       defaultServers: existingDefaultServers,
-      mcpEnabled: this.mcpStore.get("mcpEnabled"),
+      mcpEnabled: mcpEnabled,
     });
   }
 }

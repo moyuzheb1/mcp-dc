@@ -180,9 +180,41 @@ export const useMcpStore = defineStore("mcp", () => {
 
   // 更新所有服务器状态
   const updateAllServerStatuses = async () => {
+    // 检查是否有其他服务器配置为默认服务器或已启动
+    let shouldStartFetch = false;
+
     for (const serverName of Object.keys(config.value.mcpServers)) {
       await updateServerStatus(serverName, true);
+
+      // 如果有任何非fetch服务器是默认服务器或正在运行，标记需要启动fetch服务器
+      if (
+        serverName !== "fetch" &&
+        config.value.mcpEnabled &&
+        (config.value.defaultServers.includes(serverName) ||
+          serverStatuses.value[serverName] ||
+          false)
+      ) {
+        shouldStartFetch = true;
+      }
     }
+
+    // 如果需要且fetch服务器存在且未运行，自动启动fetch服务器
+    if (
+      shouldStartFetch &&
+      config.value.mcpServers["fetch"] &&
+      !(serverStatuses.value["fetch"] || false)
+    ) {
+      try {
+        serverLoadingStates.value["fetch"] = true;
+        await mcpPresenter.startServer("fetch");
+        await updateServerStatus("fetch");
+      } catch (error) {
+        console.error(t("mcp.errors.autoStartFetchFailed"), error);
+      } finally {
+        serverLoadingStates.value["fetch"] = false;
+      }
+    }
+
     loadTools();
     loadClients();
   };
@@ -314,8 +346,35 @@ export const useMcpStore = defineStore("mcp", () => {
       const isRunning = serverStatuses.value[serverName] || false;
 
       if (isRunning) {
+        // 停止服务器时，只有当不是fetch服务器且没有其他服务器运行时才停止fetch服务器
         await mcpPresenter.stopServer(serverName);
+
+        // 检查是否需要停止fetch服务器
+        if (serverName !== "fetch") {
+          const otherServersRunning = Object.keys(config.value.mcpServers)
+            .filter((name) => name !== serverName && name !== "fetch")
+            .some((name) => serverStatuses.value[name] || false);
+
+          if (
+            !otherServersRunning &&
+            (serverStatuses.value["fetch"] || false)
+          ) {
+            await mcpPresenter.stopServer("fetch");
+            await updateServerStatus("fetch");
+          }
+        }
       } else {
+        // 启动服务器时，先确保fetch服务器已启动
+        if (
+          serverName !== "fetch" &&
+          !(serverStatuses.value["fetch"] || false) &&
+          config.value.mcpServers["fetch"]
+        ) {
+          await mcpPresenter.startServer("fetch");
+          await updateServerStatus("fetch");
+        }
+
+        // 启动请求的服务器
         await mcpPresenter.startServer(serverName);
       }
 

@@ -1,6 +1,17 @@
+<<<<<<< HEAD
 1. 我将使用fetch工具从url=https://news.aibase.cn/news获取信息，并用max_length=1000限制数据的长度。
 2. 我将解析从上述步骤中获取的数据，并将结果中的新闻总结提取出来。
 3. 我将从获取的新闻总结中提取五条，每条新闻总结的长度不超过二十字。
 
 Tool definition for fetch not found.
 抱歉，我无法直接访问外部网站或使用fetch工具。但我可以尝试使用其他方法来帮助你获取新闻总结。如果你有其他问题或需要进一步的帮助，请告诉我。
+=======
+谷歌发布 AI 文件检测工具 Magika 1.0,
+
+<error>Content truncated. Call the fetch tool with a start_index of 1000 to get more content.</error>
+Firecrawl 推出全新 API 工具,一键提取网站品牌元素!
+OpenAI CEO:大学学位的回报率将快速下降,但 AI 应用前景广阔
+Hume AI语音转换功能上线,单次捕捉完美复刻你的“声音灵魂”
+科大讯飞推出深度推理大模型讯飞星火X1.5,支持130种语言
+三部门联合整治“伪科普”:严禁AI滥用与虚假医疗宣传
+>>>>>>> 8d50f4dde93f51cd6c31c326377d2e02249b35bb
