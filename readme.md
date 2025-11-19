@@ -16,3 +16,35 @@ pnpm run dev
 #启动BM25筛选接口
 python BM25.py 
 ```
+
+# 注意:
+## BM25api返回格式
+{
+  "results": [
+    {
+      "id": "string",
+      "title": "string",
+      "original_abstract": "string",
+      "bm25_score": 0,
+      "is_selected": 0
+    }
+  ],
+  "total_papers": 0,
+  "selected_count": 0,
+  "threshold": 0.3
+}
+## Sentence-BERT返回格式
+{
+  "results": [
+    {
+      "id": "string",
+      "title": "string",
+      "original_abstract": "string",
+      "similarity_score": 0,
+      "is_selected": 0
+    }
+  ],
+  "total_papers": 0,
+  "selected_count": 0,
+  "threshold": 0
+}
