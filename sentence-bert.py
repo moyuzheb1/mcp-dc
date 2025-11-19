@@ -3,7 +3,7 @@ import sys
 import logging
 import os
 import platform
-import json
+import csv
 import numpy as np
 from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException
@@ -41,7 +41,7 @@ if sys.version_info < (3, 7):
 # ---------------------- 核心配置 ----------------------
 DEFAULT_MODEL = "all-MiniLM-L6-v2"  # 轻量级Sentence-BERT模型
 DEFAULT_THRESHOLD = 0.5  # 相似度阈值
-PAPERS_JSON_PATH = "papers.json"
+PAPERS_CSV_PATH = "papers.csv"  # 改为CSV路径
 API_HOST = "0.0.0.0"
 API_PORT = 2378  # 与BM25区分端口
 
@@ -55,7 +55,7 @@ except Exception as e:
     sys.exit(1)
 
 # ---------------------- 读取论文数据 ----------------------
-def load_papers_from_file(file_path: str = PAPERS_JSON_PATH) -> List[Dict[str, str]]:
+def load_papers_from_file(file_path: str = PAPERS_CSV_PATH) -> List[Dict[str, str]]:
     logger.info(f"开始读取论文文件：{os.path.abspath(file_path)}")
     logger.info(f"当前工作目录：{os.getcwd()}")
     
@@ -63,8 +63,15 @@ def load_papers_from_file(file_path: str = PAPERS_JSON_PATH) -> List[Dict[str, s
         raise FileNotFoundError(f"文件不存在（当前目录：{os.getcwd()}）")
     
     try:
+        papers = []
         with open(file_path, 'r', encoding='utf-8') as f:
-            papers = json.load(f)
+            reader = csv.DictReader(f)
+            for row in reader:
+                papers.append({
+                    "id": row["id"],
+                    "title": row["title"],
+                    "abstract": row["abstract"]
+                })
         
         required_fields = {"id", "title", "abstract"}
         for idx, paper in enumerate(papers):
@@ -77,8 +84,6 @@ def load_papers_from_file(file_path: str = PAPERS_JSON_PATH) -> List[Dict[str, s
         
         logger.info(f"✅ 成功读取 {len(papers)} 篇论文")
         return papers
-    except json.JSONDecodeError:
-        raise ValueError("JSON格式错误（请用 https://json.cn/ 校验）")
     except Exception as e:
         raise RuntimeError(f"读取文件失败：{str(e)}")
 
@@ -134,13 +139,13 @@ def process_papers(query: str, threshold: float = DEFAULT_THRESHOLD) -> List[Dic
             "id": paper["id"],
             "title": paper["title"],
             "original_abstract": paper["abstract"],
-            "similarity_score": score,
-            "is_selected": 1 if score > threshold else 0
+            "similarity_score": score
         })
     
     # 按相似度降序排序
     results.sort(key=lambda x: x["similarity_score"], reverse=True)
-    return results
+    # 只返回分数最高的一篇论文
+    return results[:1]
 
 # ---------------------- API接口定义 ----------------------
 app = FastAPI(title="Sentence-BERT论文匹配API", description="基于句子嵌入的论文相关性匹配接口")
@@ -154,23 +159,22 @@ class PaperResult(BaseModel):
     title: str
     original_abstract: str
     similarity_score: float
-    is_selected: int
 
 class SentenceBERTResponse(BaseModel):
     results: List[PaperResult]
     total_papers: int
-    selected_count: int
+    selected_count: int  # 保留字段名但实际代表最高分数论文数（总是1）
     threshold: float
 
 @app.post("/sentence-bert/match", response_model=SentenceBERTResponse, summary="获取论文相似度匹配结果")
 async def match_papers(request: SentenceBERTRequest):
     try:
         results = process_papers(query=request.query, threshold=request.threshold)
-        selected_count = sum(1 for res in results if res["is_selected"] == 1)
+        # 只返回分数最高的一篇论文，所以selected_count总是1
         return {
             "results": results,
             "total_papers": len(results),
-            "selected_count": selected_count,
+            "selected_count": 1,  # 因为只返回最高分数的一篇论文
             "threshold": request.threshold
         }
     except Exception as e:
@@ -181,7 +185,6 @@ async def match_papers(request: SentenceBERTRequest):
 if __name__ == "__main__":
     logger.info("=== Sentence-BERT论文匹配API 开始启动 ===")
     logger.info(f"📡 服务配置：{API_HOST}:{API_PORT}")
-    logger.info(f"📄 论文文件路径：{os.path.abspath(PAPERS_JSON_PATH)}")
     logger.info(f"🤖 使用模型：{DEFAULT_MODEL}")
     logger.info("⚠️  启动后请勿关闭终端（关闭将停止服务）")
     logger.info("💡 访问 http://localhost:2378/docs 可测试API")

@@ -26,7 +26,6 @@ python BM25.py
       "title": "string",
       "original_abstract": "string",
       "bm25_score": 0,
-      "is_selected": 0
     }
   ],
   "total_papers": 0,
@@ -41,7 +40,6 @@ python BM25.py
       "title": "string",
       "original_abstract": "string",
       "similarity_score": 0,
-      "is_selected": 0
     }
   ],
   "total_papers": 0,

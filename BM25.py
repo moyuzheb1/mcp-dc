@@ -1,6 +1,7 @@
 # 第一步：先添加日志配置（确保所有步骤都有输出）
 import sys
 import logging
+import csv  # 新增CSV模块
 
 # 配置日志：强制输出到控制台，不静默任何信息
 logging.basicConfig(
@@ -16,7 +17,6 @@ try:
     import re
     import nltk
     import math
-    import json
     import matplotlib.pyplot as plt
     from collections import defaultdict
     from nltk.corpus import stopwords, wordnet
@@ -43,7 +43,7 @@ if sys.version_info < (3, 7):
 DEFAULT_K1 = 0.9
 DEFAULT_B = 0.5
 DEFAULT_THRESHOLD = 0.3
-PAPERS_JSON_PATH = "papers.json"
+PAPERS_CSV_PATH = "papers.csv"  # 修改为CSV文件路径
 API_HOST = "0.0.0.0"
 API_PORT = 2625  # 目标端口
 
@@ -71,8 +71,8 @@ lemmatizer = WordNetLemmatizer()
 STOPWORDS = set(stopwords.words('english'))
 logger.info("✅ 工具初始化完成")
 
-# ---------------------- 读取论文数据（添加路径日志）----------------------
-def load_papers_from_file(file_path: str = PAPERS_JSON_PATH) -> List[Dict[str, str]]:
+# ---------------------- 读取论文数据（修改为CSV读取）----------------------
+def load_papers_from_file(file_path: str = PAPERS_CSV_PATH) -> List[Dict[str, str]]:
     logger.info(f"开始读取论文文件：{os.path.abspath(file_path)}")
     logger.info(f"当前工作目录：{os.getcwd()}")  # 打印当前目录，方便用户排查文件位置
     
@@ -80,22 +80,37 @@ def load_papers_from_file(file_path: str = PAPERS_JSON_PATH) -> List[Dict[str, s
         raise FileNotFoundError(f"文件不存在（当前目录：{os.getcwd()}）")
     
     try:
+        papers = []
         with open(file_path, 'r', encoding='utf-8') as f:
-            papers = json.load(f)
-        
-        required_fields = {"id", "title", "abstract"}
-        for idx, paper in enumerate(papers):
-            if not required_fields.issubset(paper.keys()):
-                missing = required_fields - set(paper.keys())
-                raise ValueError(f"第 {idx+1} 篇论文缺少字段：{missing}（ID：{paper.get('id', '未知')}）")
+            reader = csv.DictReader(f)  # 使用DictReader按列名读取
+            fieldnames = reader.fieldnames
+            
+            # 检查必要列是否存在
+            required_fields = {"id", "title", "abstract"}
+            missing_fields = required_fields - set(fieldnames)
+            if missing_fields:
+                raise ValueError(f"CSV文件缺少必要列：{set(fieldnames)}")
+            
+            # 读取并验证每行数据
+            for idx, row in enumerate(reader, 1):  # 行号从1开始
+                paper = {
+                    "id": row["id"].strip(),
+                    "title": row["title"].strip(),
+                    "abstract": row["abstract"].strip()
+                }
+                # 检查空值
+                for field in required_fields:
+                    if not paper[field]:
+                        raise ValueError(f"第{idx}行的{field}字段为空（ID：{paper['id'] or '未知'}）")
+                papers.append(paper)
         
         if len(papers) == 0:
-            raise ValueError("论文文件为空")
+            raise ValueError("CSV文件为空或无有效数据行")
         
         logger.info(f"✅ 成功读取 {len(papers)} 篇论文")
         return papers
-    except json.JSONDecodeError:
-        raise ValueError("JSON格式错误（请用 https://json.cn/ 校验）")
+    except csv.Error as e:
+        raise ValueError(f"CSV格式错误：{str(e)}（请检查列分隔符和格式）")
     except Exception as e:
         raise RuntimeError(f"读取文件失败：{str(e)}")
 
@@ -185,7 +200,7 @@ def calculate_bm25(query, doc_freqs, doc_lengths, avgdl, term_freqs, k1=DEFAULT_
 # ---------------------- 结果处理函数（简化返回字段）----------------------
 def process_papers(query: str, k1: float = DEFAULT_K1, b: float = DEFAULT_B) -> List[Dict[str, Any]]:
     if not GLOBAL_PAPERS:
-        raise ValueError("未加载到有效论文数据，请检查：1. papers.json是否在当前目录 2. JSON格式是否正确 3. 是否包含id/title/abstract字段")
+        raise ValueError("未加载到有效论文数据，请检查：1. papers.csv是否在当前目录 2. CSV格式是否正确 3. 是否包含id/title/abstract列")
     
     abstracts = [paper["abstract"] for paper in GLOBAL_PAPERS]
     cleaned_abs = [clean_text_en(abs_text) for abs_text in abstracts]
@@ -202,11 +217,11 @@ def process_papers(query: str, k1: float = DEFAULT_K1, b: float = DEFAULT_B) -> 
             "title": paper["title"],  # 保留
             "original_abstract": paper["abstract"],  # 保留
             "bm25_score": round(bm25_scores[i], 4),  # 保留（用于判断相关性强弱）
-            "is_selected": 1 if bm25_scores[i] > DEFAULT_THRESHOLD else 0  # 保留（用于判断是否入选）
         })
     
     results.sort(key=lambda x: x["bm25_score"], reverse=True)
-    return results
+    # 只返回分数最高的一篇论文
+    return results[:1]
 
 # ---------------------- API接口定义（同步简化响应模型）----------------------
 app = FastAPI(title="BM25论文筛选API", description="仅需传入查询关键词，返回相关性排序结果（简化字段）")
@@ -222,23 +237,22 @@ class PaperResult(BaseModel):
     title: str
     original_abstract: str
     bm25_score: float
-    is_selected: int
 
 class BM25Response(BaseModel):
     results: List[PaperResult]  # 用简化后的PaperResult模型
     total_papers: int
-    selected_count: int
+    selected_count: int  # 保留字段名但实际代表最高分数论文数（总是1）
     threshold: float = DEFAULT_THRESHOLD
 
 @app.post("/bm25/score", response_model=BM25Response, summary="获取论文相关性评分")
 async def score_papers(request: BM25Request):
     try:
         results = process_papers(query=request.query, k1=request.k1, b=request.b)
-        selected_count = sum(1 for res in results if res["is_selected"] == 1)
+        # 只返回分数最高的一篇论文，所以selected_count总是1
         return {
             "results": results,
             "total_papers": len(results),
-            "selected_count": selected_count,
+            "selected_count": 1,  # 因为只返回最高分数的一篇论文
             "threshold": DEFAULT_THRESHOLD
         }
     except Exception as e:
@@ -249,7 +263,7 @@ async def score_papers(request: BM25Request):
 if __name__ == "__main__":
     logger.info("=== BM25论文筛选API 开始启动 ===")
     logger.info(f"📡 服务配置：{API_HOST}:{API_PORT}")
-    logger.info(f"📄 论文文件路径：{os.path.abspath(PAPERS_JSON_PATH)}")
+    logger.info(f"📄 论文文件路径：{os.path.abspath(PAPERS_CSV_PATH)}")  # 更新为CSV路径
     logger.info("⚠️  启动后请勿关闭终端（关闭将停止服务）")
     logger.info("💡 访问 http://localhost:2625/docs 可测试API")
     
