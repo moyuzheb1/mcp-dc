@@ -1,26 +1,15 @@
 <template>
   <div class="h-full w-full flex flex-col items-center justify-between relative">
-    <!-- 右上角刷新按钮 -->
-    <Button 
-      class="absolute top-4 right-4 h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg z-50 flex items-center justify-center gap-2 w-auto min-w-[120px] text-center"
-      @click="handleRefreshButtonClick"
-    >
-      <Icon icon="lucide:refresh-cw" class="h-4 w-4" />
-      <span>更新内容</span>
-    </Button>
-    
     <!-- 右上角问题生成按钮 -->
     <Button 
-      class="absolute top-4 right-[140px] h-10 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-full shadow-lg z-50 flex items-center justify-center gap-2 w-auto min-w-[120px] text-center"
+      class="absolute top-4 right-4 h-10 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-full shadow-lg z-50 flex items-center justify-center gap-2 w-auto min-w-[120px] text-center"
       @click="handleQuestionGenerateClick"
     >
       <Icon icon="lucide:help-circle" class="h-4 w-4" />
       <span>问题生成</span>
     </Button>
+    
     <div class="w-full grow flex flex-col items-center justify-center px-4">
-      <!-- 移除logo图标 -->
-      <!-- <img src="@/assets/logo-dark.png" class="w-24 h-24" loading="lazy" /> -->
-      <!-- 替换原有的欢迎语，显示自定义文本 -->
       <div class="w-full max-w-2xl">
         <h1 v-if="customText" class="text-xl md:text-2xl font-bold py-4 text-center whitespace-pre-line">{{ customText }}</h1>
         <!-- 如果自定义文本为空或出错，显示默认欢迎语 -->
@@ -115,24 +104,6 @@
         </template>
       </ChatInput>
     </div>
-    
-    <!-- 右下角深绿色按钮 -->
-    <Button 
-      class="absolute bottom-4 right-[145px] h-10 px-4 bg-green-800 hover:bg-green-900 text-white rounded-full shadow-lg z-50 flex items-center justify-center gap-2 w-auto min-w-[120px] text-center"
-      @click="handleNewsButtonClick"
-    >
-      <Icon icon="lucide:newspaper" class="h-4 w-4" />
-      <span>最新资讯</span>
-    </Button>
-    
-    <!-- 右下角蓝色长条按钮 -->
-    <Button 
-      class="absolute bottom-4 right-4 h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg z-50 flex items-center justify-center gap-2 w-auto min-w-[120px] text-center"
-      @click="handleActionButtonClick"
-    >
-      <Icon icon="lucide:sparkle" class="h-4 w-4" />
-      <span>智能推荐</span>
-    </Button>
   </div>
 </template>
 
@@ -161,6 +132,7 @@ const configPresenter = usePresenter('configPresenter')
 const threadPresenter = usePresenter('threadPresenter')
 const themeStore = useThemeStore()
 const router = useRouter()
+
 // 定义偏好模型的类型
 interface PreferredModel {
   modelId: string
@@ -451,61 +423,9 @@ onMounted(async () => {
   }
 })
 
-const handleNewsButtonClick = async () => {
-  try {
-    
-    const queryMessage = "用fetch,url=https://news.aibase.cn/news,max_length=1000,结果只包含五条新闻总结,不要有其他内容";
-    console.log('发送的消息:', queryMessage);
-    
-    // 调用handleSend函数发送消息
-    await handleSend({
-      text: queryMessage,
-      files: [],
-      links: [],
-      think: false,
-      search: false
-    });
-  } catch (error) {
-    console.error('发送消息时出错:', error);
-    alert(`发送消息失败: ${(error as Error).message || '未知错误'}`);
-  }
-};
-
-const handleActionButtonClick = async () => {
-  try {
-    // 使用通过contextBridge暴露的API读取user-preferences.txt文件
-    const fileContent = await window.api.readLocalFile('user-preferences.txt');
-    
-    if (fileContent) {
-      console.log('读取到的偏好内容:', fileContent);
-      // 构建查询消息
-      const queryMessage = `请你用arxiv-mcp-server的工具查找三篇和${fileContent}有关的论文，要新一点，sort_by参数为date。你的回答应该遵循以下格式，每行小标题加粗：标题：此处为对应标题\n摘要：此处为对应摘要，中文，控制在二十字以内\n链接：此处为对应论文链接`;
-      console.log('构建的查询消息:', queryMessage);
-      
-      // 调用handleSend函数发送构建的查询消息
-      await handleSend({
-        text: queryMessage,
-        files: [],
-        links: [],
-        think: false,
-        search: false
-      });
-    } else {
-      console.error('文件内容为空');
-      alert('用户偏好文件内容为空，请检查项目根目录下的user-preferences.txt文件');
-    }
-  } catch (error) {
-    console.error('读取文件并发送消息时出错:', error);
-    alert(`读取或发送消息失败: ${(error as Error).message || '未知错误'}`);
-  }
-};
-
-// 处理刷新按钮点击事件：
-// 1) 基于用户偏好与抓取到的最新资讯构建查询（通过MCP工具fetch请求），
-// 2) 在新会话中发送该查询，等待助手生成结果，
-// 3) 将生成的文本写入项目根目录的 custom-welcome.txt（覆盖原文件），并更新界面显示。
-const handleRefreshButtonClick = async () => {
-  console.log('刷新按钮被点击');
+// 处理问题生成按钮点击事件
+const handleQuestionGenerateClick = async () => {
+  console.log('问题生成按钮被点击');
   try {
     // 读取用户偏好（如果存在）
     let userPref = '';
@@ -517,123 +437,26 @@ const handleRefreshButtonClick = async () => {
       userPref = '';
     }
 
-    // 构建综合查询
-    const combinedQuery = `用fetch,url=https://news.aibase.cn/news,max_length=1000,结果只包含五条新闻总结,每条二十字以内,不要有其他内容`;
-    console.log('构建的查询消息:', combinedQuery);
-
-    // 为了避免路由跳转，我们直接使用线程服务创建线程，而不经过chatStore可能触发路由跳转的方法
-    const tabId = window.api.getWebContentsId();
+    // 构建问题生成查询
+    const questionQuery = userPref 
+      ? `基于用户偏好"${userPref}"，生成5个相关的深入问题，每个问题都要具体且有针对性`
+      : "生成5个关于人工智能和技术发展的深入问题，每个问题都要具体且有针对性";
     
-    // 创建线程并保存设置，但不激活该线程以避免路由跳转
-    try {
-      const threadId = await threadPresenter.createConversation(
-        '欢迎语刷新', 
-        {
-          providerId: activeModel.value.providerId,
-          modelId: activeModel.value.id,
-          systemPrompt: systemPrompt.value,
-          temperature: temperature.value,
-          contextLength: contextLength.value,
-          maxTokens: maxTokens.value,
-          artifacts: artifacts.value as 0 | 1,
-          thinkingBudget: thinkingBudget.value,
-          enableSearch: enableSearch.value,
-          forcedSearch: forcedSearch.value,
-          searchStrategy: searchStrategy.value,
-          reasoningEffort: reasoningEffort.value,
-          verbosity: verbosity.value,
-          enabledMcpTools: chatStore.chatConfig.enabledMcpTools
-        } as any,
-        tabId
-      );
-      console.log('创建的线程ID:', threadId);
-      
-      // 直接发送消息，不使用chatStore.sendMessage以避免可能的路由跳转
-      const messageContent = JSON.stringify({
-        text: combinedQuery,
-        files: [],
-        links: [],
-        think: false,
-        search: false
-      });
-      
-      // 发送用户消息
-      await threadPresenter.sendMessage(threadId, messageContent, "user");
-      
-      // 启动流完成
-      await threadPresenter.startStreamCompletion(threadId, undefined, {});
-      
-      // 辅助函数：从助手消息块中抽取可读文本
-      const extractAssistantText = (assistantMsg: any) => {
-        if (!assistantMsg || !assistantMsg.content) return '';
-        const parts: string[] = [];
-        for (const block of assistantMsg.content) {
-          if (!block) continue;
-          if (block.type === 'content' && block.content) parts.push(block.content);
-          else if (block.type === 'reasoning_content' && block.content) parts.push(block.content);
-          else if (block.type === 'tool_call' && block.tool_call && block.tool_call.response) parts.push(block.tool_call.response);
-          else if (typeof block.content === 'string') parts.push(block.content);
-        }
-        return parts.join('\n').trim();
-      }
+    console.log('构建的查询消息:', questionQuery);
 
-      // 等待助手响应（轮询），最多等待 60 秒
-      let assistantText = '';
-      const maxAttempts = 60;
-      for (let i = 0; i < maxAttempts; i++) {
-        await new Promise((r) => setTimeout(r, 1000));
-        try {
-          const msgsRes: any = await threadPresenter.getMessages(threadId, 1, 100)
-          const assistantMsg = msgsRes?.list?.find((m: any) => m.role === 'assistant' && m.content && m.content.length > 0)
-          if (assistantMsg) {
-            assistantText = extractAssistantText(assistantMsg)
-            if (assistantText && assistantText.length > 0) break
-          }
-        } catch (err) {
-          console.warn('获取消息时出错，稍候重试', err)
-        }
-      }
-
-      // 如果没有获取到响应，使用默认文本
-      if (!assistantText) {
-        console.log('未获取到助手响应，使用默认文本');
-        assistantText = "感谢您的使用！我是您的AI助手，随时为您提供帮助。请随时提问，我会尽力为您解答。";
-      }
-
-      console.log('最终使用的文本:', assistantText);
-      
-      // 将文本写入custom-welcome.txt文件，只保留最后九行
-       try {
-         // 分割文本为行，只保留最后九行
-         const lines = assistantText.split('\n');
-         const lastNineLines = lines.slice(-9).join('\n').trim();
-         
-         await window.api.writeLocalFile('custom-welcome.txt', lastNineLines);
-         customText.value = lastNineLines;
-         customTextError.value = '';
-         console.log('成功写入custom-welcome.txt文件（只保留最后九行）');
-       } catch (error) {
-         console.error('写入custom-welcome.txt文件失败:', error);
-         customTextError.value = '无法写入自定义欢迎文本';
-         alert('保存失败，请检查应用是否有写入权限');
-       }
-    } catch (error) {
-      console.error('处理刷新请求时出错:', error);
-      alert(`刷新失败: ${(error as Error).message || '未知错误'}`);
-    }
+    // 创建新会话并发送消息
+    await handleSend({
+      text: questionQuery,
+      files: [],
+      links: [],
+      think: false,
+      search: false
+    });
   } catch (error) {
-    console.error('刷新按钮处理失败:', error);
-    alert(`刷新失败: ${(error as Error).message || '未知错误'}`);
+    console.error('问题生成失败:', error);
+    alert(`问题生成失败: ${(error as Error).message || '未知错误'}`);
   }
 }
-
-// 问题生成按钮点击事件：跳转到问题生成页面
-const handleQuestionGenerateClick = () => {
-  router.push('/question')
-}
-
-// 直接使用chatStore中的数据，不需要自定义函数来获取历史记录
-// 下面的函数在handleRefreshButtonClick中直接使用chatStore数据
 
 const handleSend = async (content: UserMessageContent) => {
   const threadId = await chatStore.createThread(content.text, {

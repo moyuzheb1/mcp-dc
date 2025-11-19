@@ -25,6 +25,15 @@ const router = createRouter({
         icon: 'lucide:message-square'
       }
     },
+    {
+      path: '/question',
+      name: 'question',
+      component: () => import('@/components/Question.vue'),
+      meta: {
+        titleKey: 'routes.question',
+        icon: 'lucide:help-circle'
+      }
+    },
     ...(import.meta.env.VITE_ENABLE_PLAYGROUND === 'true'
       ? [
           {
