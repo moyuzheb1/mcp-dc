@@ -1,46 +1,119 @@
-import re
-import nltk
-import math
-import json
-import matplotlib.pyplot as plt
-from collections import defaultdict
-from nltk.corpus import stopwords, wordnet
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
+# 第一步：先添加日志配置（确保所有步骤都有输出）
+import sys
+import logging
 
-# ---------------------- 1. 初始化NLTK资源（首次运行自动下载）----------------------
+# 配置日志：强制输出到控制台，不静默任何信息
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    stream=sys.stdout  # 确保输出到命令行，不被隐藏
+)
+logger = logging.getLogger(__name__)
+
+# 第二步：导入依赖（每步都加日志，看是否卡在导入）
+logger.info("开始加载依赖模块...")
 try:
+    import re
+    import nltk
+    import math
+    import json
+    import matplotlib.pyplot as plt
+    from collections import defaultdict
+    from nltk.corpus import stopwords, wordnet
+    from nltk.tokenize import word_tokenize
+    from nltk.stem import WordNetLemmatizer
+    from fastapi import FastAPI, HTTPException
+    from pydantic import BaseModel
+    from typing import List, Dict, Any
+    import uvicorn
+    import os
+    import platform
+    logger.info("✅ 所有依赖模块加载成功")
+except ImportError as e:
+    logger.error(f"❌ 依赖模块加载失败：缺少 {e.name}（请运行 pip install {e.name}）")
+    sys.exit(1)
+
+# 检查Python版本（FastAPI要求3.7+）
+logger.info(f"当前Python版本：{platform.python_version()}")
+if sys.version_info < (3, 7):
+    logger.error("❌ Python版本过低！请使用Python 3.7及以上版本")
+    sys.exit(1)
+
+# ---------------------- 核心配置 ----------------------
+DEFAULT_K1 = 0.9
+DEFAULT_B = 0.5
+DEFAULT_THRESHOLD = 0.3
+PAPERS_JSON_PATH = "papers.json"
+API_HOST = "0.0.0.0"
+API_PORT = 2625  # 目标端口
+
+# ---------------------- NLTK资源初始化（强制日志输出）----------------------
+logger.info("开始初始化NLTK资源...")
+try:
+    # 测试资源是否存在，不存在则下载（添加超时控制）
     stopwords.words('english')
     wordnet.synsets('test')
+    logger.info("✅ NLTK资源已存在，无需下载")
 except LookupError:
-    nltk.download('stopwords')
-    nltk.download('wordnet')
-    nltk.download('punkt')
-    nltk.download('averaged_perceptron_tagger')
+    logger.info("⚠️  未找到NLTK资源，开始自动下载（首次运行需联网）...")
+    try:
+        nltk.download('stopwords', quiet=True)
+        nltk.download('wordnet', quiet=True)
+        nltk.download('punkt', quiet=True)
+        nltk.download('averaged_perceptron_tagger', quiet=True)
+        logger.info("✅ NLTK资源下载完成")
+    except Exception as e:
+        logger.error(f"❌ NLTK资源下载失败：{str(e)}（请检查网络连接）")
+        sys.exit(1)
 
-# ---------------------- 2. 配置参数（仅需修改这3处！）----------------------
-INPUT_JSON = "papers.json"  # 你的JSON文件名（同文件夹下，如"my_papers.json"）
-OUTPUT_JSON = "bm25_screening_results.json"  # 输出结果文件名
-QUERY = "large language model"  # 你的初筛关键词（英文）
+# ---------------------- 工具初始化 ----------------------
+lemmatizer = WordNetLemmatizer()
+STOPWORDS = set(stopwords.words('english'))
+logger.info("✅ 工具初始化完成")
 
-# BM25参数（英文摘要推荐值，无需改动）
-K1 = 0.9  # 词频饱和系数
-B = 0.5   # 文档长度归一化系数
-SELECTION_THRESHOLD = 0.3  # 筛选阈值（可根据得分分布图调整）
+# ---------------------- 读取论文数据（添加路径日志）----------------------
+def load_papers_from_file(file_path: str = PAPERS_JSON_PATH) -> List[Dict[str, str]]:
+    logger.info(f"开始读取论文文件：{os.path.abspath(file_path)}")
+    logger.info(f"当前工作目录：{os.getcwd()}")  # 打印当前目录，方便用户排查文件位置
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"文件不存在（当前目录：{os.getcwd()}）")
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            papers = json.load(f)
+        
+        required_fields = {"id", "title", "abstract"}
+        for idx, paper in enumerate(papers):
+            if not required_fields.issubset(paper.keys()):
+                missing = required_fields - set(paper.keys())
+                raise ValueError(f"第 {idx+1} 篇论文缺少字段：{missing}（ID：{paper.get('id', '未知')}）")
+        
+        if len(papers) == 0:
+            raise ValueError("论文文件为空")
+        
+        logger.info(f"✅ 成功读取 {len(papers)} 篇论文")
+        return papers
+    except json.JSONDecodeError:
+        raise ValueError("JSON格式错误（请用 https://json.cn/ 校验）")
+    except Exception as e:
+        raise RuntimeError(f"读取文件失败：{str(e)}")
 
-# ---------------------- 3. 工具初始化 ----------------------
-lemmatizer = WordNetLemmatizer()  # 英文词形还原器
-STOPWORDS = set(stopwords.words('english'))  # 英文停用词表
+# 预加载论文
+GLOBAL_PAPERS = []
+try:
+    GLOBAL_PAPERS = load_papers_from_file()
+except Exception as e:
+    logger.error(f"⚠️  论文数据加载失败：{str(e)}（启动后API会返回该错误）")
+    GLOBAL_PAPERS = []  # 继续启动服务，让用户通过API查看详情
 
-# ---------------------- 4. 数据预处理函数（英文适配）----------------------
+# ---------------------- 数据预处理函数 ----------------------
 def clean_text_en(text):
-    """英文文本清洗：去标点、数字、小写化"""
-    text = re.sub(r'[^\w\s]', '', text)  # 去标点
-    text = re.sub(r'\d+', '', text)      # 去数字
+    text = re.sub(r'[^\w\s]', '', text)
+    text = re.sub(r'\d+', '', text)
     return text.lower().strip()
 
 def get_wordnet_pos(tag):
-    """词性标签转换（用于精准词形还原）"""
     if tag.startswith('J'):
         return wordnet.ADJ
     elif tag.startswith('V'):
@@ -52,10 +125,8 @@ def get_wordnet_pos(tag):
     return wordnet.NOUN
 
 def tokenize_en(text):
-    """英文分词+停用词过滤+词形还原"""
-    tokens = word_tokenize(text)  # 分词
-    pos_tags = nltk.pos_tag(tokens)  # 词性标注
-    # 过滤无效词并还原
+    tokens = word_tokenize(text)
+    pos_tags = nltk.pos_tag(tokens)
     return [
         lemmatizer.lemmatize(word, pos=get_wordnet_pos(tag))
         for word, tag in pos_tags
@@ -63,19 +134,17 @@ def tokenize_en(text):
     ]
 
 def expand_keywords_en(query):
-    """关键词扩展（基于WordNet获取近义词，提升召回率）"""
     expanded = tokenize_en(query)
     for word in tokenize_en(query):
         for syn in wordnet.synsets(word):
             expanded.extend([lemma.name() for lemma in syn.lemmas()])
-    return list(set(expanded))  # 去重
+    return list(set(expanded))
 
-# ---------------------- 5. BM25核心算法 ----------------------
+# ---------------------- BM25核心算法 ----------------------
 def build_bm25_index(tokenized_docs):
-    """构建BM25索引：统计词频、文档长度等"""
-    doc_freqs = defaultdict(int)  # 词出现的文档数
-    doc_lengths = []              # 每篇文档的词数
-    term_freqs = []               # 每篇文档的词频字典
+    doc_freqs = defaultdict(int)
+    doc_lengths = []
+    term_freqs = []
 
     for doc in tokenized_docs:
         doc_len = len(doc)
@@ -84,26 +153,22 @@ def build_bm25_index(tokenized_docs):
         for word in doc:
             freq[word] += 1
         term_freqs.append(freq)
-        # 统计文档频率（去重）
         for word in set(doc):
             doc_freqs[word] += 1
 
     avgdl = sum(doc_lengths) / len(doc_lengths) if doc_lengths else 1
     return doc_freqs, doc_lengths, avgdl, term_freqs
 
-def calculate_bm25(query, doc_freqs, doc_lengths, avgdl, term_freqs):
-    """计算每篇文档的BM25得分"""
+def calculate_bm25(query, doc_freqs, doc_lengths, avgdl, term_freqs, k1=DEFAULT_K1, b=DEFAULT_B):
     N = len(doc_lengths)
     tokenized_query = expand_keywords_en(query)
     scores = []
 
-    # 计算IDF（词的稀有度）
     idf = {
         word: math.log((N - doc_freqs.get(word, 0) + 0.5) / (doc_freqs.get(word, 0) + 0.5) + 1)
         for word in set(tokenized_query)
     }
 
-    # 计算单篇文档得分
     for i in range(N):
         doc_len = doc_lengths[i]
         score = 0.0
@@ -112,94 +177,96 @@ def calculate_bm25(query, doc_freqs, doc_lengths, avgdl, term_freqs):
             tf = doc_freq.get(word, 0)
             if tf == 0:
                 continue
-            # BM25核心公式
-            denominator = tf + K1 * (1 - B + B * (doc_len / avgdl))
-            score += idf[word] * (tf * (K1 + 1)) / denominator
+            denominator = tf + k1 * (1 - b + b * (doc_len / avgdl))
+            score += idf[word] * (tf * (k1 + 1)) / denominator
         scores.append(score)
     return scores
 
-# ---------------------- 6. JSON数据读写 ----------------------
-def read_json_data(file_path):
-    """读取含id/title/abstract的JSON文件"""
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        # 校验必填字段
-        required_fields = {"id", "title", "abstract"}
-        for item in data:
-            if not required_fields.issubset(item.keys()):
-                raise ValueError(f"JSON缺少必填字段！某条数据字段：{list(item.keys())}")
-        print(f"✅ 成功读取 {len(data)} 篇论文（字段：id/title/abstract）")
-        return data
-    except FileNotFoundError:
-        raise FileNotFoundError(f"❌ 未找到文件 {file_path}，请确认文件在同文件夹下")
-    except json.JSONDecodeError:
-        raise ValueError("❌ JSON格式错误，请检查文件内容")
-
-def save_results(data, cleaned_abstracts, tokenized_abstracts, scores):
-    """保存筛选结果到JSON（保留原始字段+处理结果）"""
+# ---------------------- 结果处理函数（简化返回字段）----------------------
+def process_papers(query: str, k1: float = DEFAULT_K1, b: float = DEFAULT_B) -> List[Dict[str, Any]]:
+    if not GLOBAL_PAPERS:
+        raise ValueError("未加载到有效论文数据，请检查：1. papers.json是否在当前目录 2. JSON格式是否正确 3. 是否包含id/title/abstract字段")
+    
+    abstracts = [paper["abstract"] for paper in GLOBAL_PAPERS]
+    cleaned_abs = [clean_text_en(abs_text) for abs_text in abstracts]
+    tokenized_abs = [tokenize_en(abs_text) for abs_text in cleaned_abs]
+    
+    doc_freqs, doc_lengths, avgdl, term_freqs = build_bm25_index(tokenized_abs)
+    bm25_scores = calculate_bm25(query, doc_freqs, doc_lengths, avgdl, term_freqs, k1, b)
+    
+    # 核心修改：仅保留 id、title、original_abstract + 评分相关字段
     results = []
-    for i, item in enumerate(data):
+    for i, paper in enumerate(GLOBAL_PAPERS):
         results.append({
-            "id": item["id"],
-            "title": item["title"],
-            "original_abstract": item["abstract"],
-            "cleaned_abstract": cleaned_abstracts[i],
-            "tokenized_abstract": tokenized_abstracts[i],
-            "bm25_score": round(scores[i], 4),
-            "is_selected": 1 if scores[i] > SELECTION_THRESHOLD else 0
+            "id": paper["id"],  # 保留
+            "title": paper["title"],  # 保留
+            "original_abstract": paper["abstract"],  # 保留
+            "bm25_score": round(bm25_scores[i], 4),  # 保留（用于判断相关性强弱）
+            "is_selected": 1 if bm25_scores[i] > DEFAULT_THRESHOLD else 0  # 保留（用于判断是否入选）
         })
-    # 按BM25得分降序排序
+    
     results.sort(key=lambda x: x["bm25_score"], reverse=True)
-    # 保存文件
-    with open(OUTPUT_JSON, 'w', encoding='utf-8') as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
-    print(f"✅ 结果已保存到 {OUTPUT_JSON}")
     return results
 
-# ---------------------- 7. 结果可视化与输出 ----------------------
-def visualize_score_distribution(scores):
-    """绘制BM25得分分布图（辅助调整阈值）"""
-    plt.figure(figsize=(8, 4))
-    plt.hist(scores, bins=10, color='#2E86AB', alpha=0.7, edgecolor='black')
-    plt.xlabel('BM25 Score')
-    plt.ylabel('Number of Papers')
-    plt.title('BM25 Score Distribution (English Abstracts)')
-    plt.axvline(x=SELECTION_THRESHOLD, color='red', linestyle='--', label=f'Threshold: {SELECTION_THRESHOLD}')
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+# ---------------------- API接口定义（同步简化响应模型）----------------------
+app = FastAPI(title="BM25论文筛选API", description="仅需传入查询关键词，返回相关性排序结果（简化字段）")
 
-def print_top_results(results, top_n=5):
-    """打印得分最高的N篇论文（快速查看）"""
-    print(f"\n🏆 Top {top_n} 高相关论文：")
-    for i, res in enumerate(results[:top_n]):
-        print(f"\nRank {i+1} | Score: {res['bm25_score']}")
-        print(f"ID: {res['id']}")
-        print(f"Title: {res['title']}")
-        print(f"Abstract (first 100 chars): {res['original_abstract'][:100]}...")
+class BM25Request(BaseModel):
+    query: str  # 唯一必填参数
+    k1: float = DEFAULT_K1
+    b: float = DEFAULT_B
 
-# ---------------------- 8. 主流程（一键运行）----------------------
+# 简化响应模型：明确返回字段
+class PaperResult(BaseModel):
+    id: str
+    title: str
+    original_abstract: str
+    bm25_score: float
+    is_selected: int
+
+class BM25Response(BaseModel):
+    results: List[PaperResult]  # 用简化后的PaperResult模型
+    total_papers: int
+    selected_count: int
+    threshold: float = DEFAULT_THRESHOLD
+
+@app.post("/bm25/score", response_model=BM25Response, summary="获取论文相关性评分")
+async def score_papers(request: BM25Request):
+    try:
+        results = process_papers(query=request.query, k1=request.k1, b=request.b)
+        selected_count = sum(1 for res in results if res["is_selected"] == 1)
+        return {
+            "results": results,
+            "total_papers": len(results),
+            "selected_count": selected_count,
+            "threshold": DEFAULT_THRESHOLD
+        }
+    except Exception as e:
+        logger.error(f"API处理失败：{str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+# ---------------------- 启动逻辑（强制日志输出）----------------------
 if __name__ == "__main__":
-    print("=== 开始BM25英文文献初筛 ===")
-    # 步骤1：读取JSON数据
-    raw_data = read_json_data(INPUT_JSON)
-    # 步骤2：提取摘要并预处理
-    abstracts = [item["abstract"] for item in raw_data]
-    cleaned_abs = [clean_text_en(abs) for abs in abstracts]
-    tokenized_abs = [tokenize_en(abs) for abs in cleaned_abs]
-    print("✅ 数据预处理完成（清洗+分词+词形还原）")
-    # 步骤3：计算BM25得分
-    doc_freqs, doc_lengths, avgdl, term_freqs = build_bm25_index(tokenized_abs)
-    bm25_scores = calculate_bm25(QUERY, doc_freqs, doc_lengths, avgdl, term_freqs)
-    print("✅ BM25得分计算完成")
-    # 步骤4：保存结果
-    final_results = save_results(raw_data, cleaned_abs, tokenized_abs, bm25_scores)
-    # 步骤5：可视化+打印Top结果
-    visualize_score_distribution(bm25_scores)
-    print_top_results(final_results, top_n=5)
-    # 统计筛选结果
-    selected_count = sum([1 for res in final_results if res["is_selected"] == 1])
-    print(f"\n=== 筛选完成 ===")
-    print(f"总论文数：{len(final_results)}")
-    print(f"入选论文数：{selected_count}")
+    logger.info("=== BM25论文筛选API 开始启动 ===")
+    logger.info(f"📡 服务配置：{API_HOST}:{API_PORT}")
+    logger.info(f"📄 论文文件路径：{os.path.abspath(PAPERS_JSON_PATH)}")
+    logger.info("⚠️  启动后请勿关闭终端（关闭将停止服务）")
+    logger.info("💡 访问 http://localhost:2625/docs 可测试API")
+    
+    try:
+        # 启动服务（添加日志回调，确保启动状态可见）
+        uvicorn.run(
+            app=app,
+            host=API_HOST,
+            port=API_PORT,
+            log_level="info",
+            access_log=False  # 关闭访问日志，只保留启动日志
+        )
+    except Exception as e:
+        logger.error(f"❌ 服务启动失败：{str(e)}")
+        # 针对常见错误给出提示
+        if "address already in use" in str(e).lower():
+            logger.error("💡 解决方案：端口2625已被占用，请关闭占用程序，或修改代码中API_PORT为其他端口（如2626）")
+        elif "permission denied" in str(e).lower():
+            logger.error("💡 解决方案：无权限使用该端口（Windows需以管理员身份运行终端，Linux/Mac需加sudo）")
+        sys.exit(1)
