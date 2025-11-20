@@ -1,44 +1,52 @@
 <template>
   <div class="h-full w-full flex relative">
     <!-- 侧边栏 -->
-    <div class="w-20 h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col items-center py-4 gap-6">
+    <div class="w-24 h-full bg-gradient-to-b from-gray-50/80 to-gray-100/80 dark:from-gray-900/90 dark:to-gray-800/90 border-r border-gray-200/50 dark:border-gray-700/50 flex flex-col items-center py-6 gap-6 backdrop-blur-sm">
       <!-- 第一行留空，未来放icon -->
-      <div class="w-10 h-10"></div>
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400/20 to-blue-400/20 border border-purple-200/30 dark:border-purple-700/30"></div>
       
       <!-- 更新内容按钮 -->
       <Button 
-        class="h-10 w-10 rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg flex items-center justify-center z-50"
+        class="group relative w-20 h-16 rounded-xl bg-gradient-to-br from-purple-400/60 to-purple-500/60 hover:from-purple-500/80 hover:to-purple-600/80 text-white shadow-xl hover:shadow-2xl flex flex-col items-center justify-center gap-2 z-50 px-3 border border-purple-300/40 hover:border-purple-400/60 transition-all duration-300 transform hover:scale-105 hover:-translate-y-0.5"
         @click="handleRefreshButtonClick"
         tooltip="更新内容"
       >
-        <Icon icon="lucide:refresh-cw" class="h-5 w-5" />
+        <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <Icon icon="lucide:refresh-cw" class="h-7 w-7 group-hover:rotate-180 transition-transform duration-500" />
+        <span class="text-xs font-semibold leading-tight drop-shadow-sm">刷新内容</span>
       </Button>
       
       <!-- 问题生成按钮 -->
       <Button 
-        class="h-10 w-10 rounded-full bg-orange-600 hover:bg-orange-700 text-white shadow-lg flex items-center justify-center z-50"
+        class="group relative w-20 h-16 rounded-xl bg-gradient-to-br from-amber-400/60 to-orange-400/60 hover:from-amber-500/80 hover:to-orange-500/80 text-white shadow-xl hover:shadow-2xl flex flex-col items-center justify-center gap-2 z-50 px-3 border border-amber-300/40 hover:border-amber-400/60 transition-all duration-300 transform hover:scale-105 hover:-translate-y-0.5"
         @click="handleQuestionGenerateClick"
         tooltip="问题生成"
       >
-        <Icon icon="lucide:help-circle" class="h-5 w-5" />
+        <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <Icon icon="lucide:help-circle" class="h-7 w-7 group-hover:scale-110 transition-transform duration-300" />
+        <span class="text-xs font-semibold leading-tight drop-shadow-sm">问题生成</span>
       </Button>
       
       <!-- 最新资讯按钮 -->
       <Button 
-        class="h-10 w-10 rounded-full bg-green-800 hover:bg-green-900 text-white shadow-lg flex items-center justify-center z-50 mt-auto"
+        class="group relative w-20 h-16 rounded-xl bg-gradient-to-br from-emerald-400/60 to-teal-400/60 hover:from-emerald-500/80 hover:to-teal-500/80 text-white shadow-xl hover:shadow-2xl flex flex-col items-center justify-center gap-2 z-50 mt-auto px-3 border border-emerald-300/40 hover:border-emerald-400/60 transition-all duration-300 transform hover:scale-105 hover:-translate-y-0.5"
         @click="handleNewsButtonClick"
         tooltip="最新资讯"
       >
-        <Icon icon="lucide:newspaper" class="h-5 w-5" />
+        <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <Icon icon="lucide:newspaper" class="h-7 w-7 group-hover:scale-110 transition-transform duration-300" />
+        <span class="text-xs font-semibold leading-tight drop-shadow-sm">最新资讯</span>
       </Button>
       
       <!-- 智能推荐按钮 -->
       <Button 
-        class="h-10 w-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg flex items-center justify-center z-50"
+        class="group relative w-20 h-16 rounded-xl bg-gradient-to-br from-indigo-400/60 to-purple-400/60 hover:from-indigo-500/80 hover:to-purple-500/80 text-white shadow-xl hover:shadow-2xl flex flex-col items-center justify-center gap-2 z-50 px-3 border border-indigo-300/40 hover:border-indigo-400/60 transition-all duration-300 transform hover:scale-105 hover:-translate-y-0.5"
         @click="handleActionButtonClick"
         tooltip="智能推荐"
       >
-        <Icon icon="lucide:sparkle" class="h-5 w-5" />
+        <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <Icon icon="lucide:sparkle" class="h-7 w-7 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300" />
+        <span class="text-xs font-semibold leading-tight drop-shadow-sm">智能推荐</span>
       </Button>
     </div>
     

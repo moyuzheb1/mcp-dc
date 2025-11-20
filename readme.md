@@ -1,3 +1,12 @@
+# Environment Requirements
+| Dependency | Version Requirement |
+|------------|---------------------|
+| Python     | ≥ 3.9               | 
+| Node.js    | ≥ 22.x              | 
+| Microsoft Visual Studio C++ | 
+
+
+
 # 安装依赖
 ```bash
 pnpm install
