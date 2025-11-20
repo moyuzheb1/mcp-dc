@@ -27,6 +27,17 @@
         <span class="text-xs font-semibold leading-tight drop-shadow-sm">问题生成</span>
       </Button>
       
+      <!-- 回到首页按钮 -->
+      <Button 
+        class="group relative w-20 h-16 rounded-xl bg-gradient-to-br from-blue-400/60 to-cyan-400/60 hover:from-blue-500/80 hover:to-cyan-500/80 text-white shadow-xl hover:shadow-2xl flex flex-col items-center justify-center gap-2 z-50 px-3 border border-blue-300/40 hover:border-blue-400/60 transition-all duration-300 transform hover:scale-105 hover:-translate-y-0.5"
+        @click="handleBackToHome"
+        tooltip="回到首页"
+      >
+        <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <Icon icon="lucide:home" class="h-7 w-7 group-hover:scale-110 transition-transform duration-300" />
+        <span class="text-xs font-semibold leading-tight drop-shadow-sm">回到首页</span>
+      </Button>
+      
       <!-- 最新资讯按钮 -->
       <Button 
         class="group relative w-20 h-16 rounded-xl bg-gradient-to-br from-emerald-400/60 to-teal-400/60 hover:from-emerald-500/80 hover:to-teal-500/80 text-white shadow-xl hover:shadow-2xl flex flex-col items-center justify-center gap-2 z-50 mt-auto px-3 border border-emerald-300/40 hover:border-emerald-400/60 transition-all duration-300 transform hover:scale-105 hover:-translate-y-0.5"
@@ -606,6 +617,10 @@ const handleRefreshButtonClick = async () => {
 
 const handleQuestionGenerateClick = () => {
   router.push('/question')
+}
+
+const handleBackToHome = () => {
+  router.push('/chat')
 }
 
 const handleSend = async (content: UserMessageContent) => {
