@@ -63,12 +63,73 @@
     
     <!-- 主内容区域 -->
     <div class="flex-1 flex flex-col items-center justify-between relative">
-      <div class="w-full grow flex flex-col items-center justify-center px-4">
-        <div class="w-full max-w-2xl">
-          <h1 v-if="customText" class="text-xl md:text-2xl font-bold py-4 text-center whitespace-pre-line">{{ customText }}</h1>
-          <h1 v-else class="text-xl md:text-2xl font-bold py-4">{{ t('newThread.greeting') }}</h1>
-          <h3 v-if="!customText" class="text-lg px-8 pb-2">{{ t('newThread.prompt') }}</h3>
-          <p v-if="customTextError" class="text-sm text-red-500 px-8 mt-2">{{ customTextError }}</p>
+      <div class="w-full grow flex flex-col items-center justify-center px-4 py-6">
+        <div class="w-full max-w-8xl">
+          <!-- 显示sample.txt的内容 -->
+          <div v-if="sampleTitle" class="mb-12">
+            <div class="mb-6">
+              <h1 class="text-2xl md:text-3xl font-bold py-4 text-center text-gray-800 dark:text-gray-100">{{ sampleTitle }}</h1>
+            </div>
+            <div v-if="sampleColumns.length === 5" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
+              <div v-for="(column, index) in sampleColumns" :key="index" class="py-5 px-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/50 text-center shadow-sm hover:shadow-md transition-all duration-300">
+                <div class="text-lg font-medium mb-2">{{ column }}</div>
+                <div v-if="keywords.length > index" class="mt-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/50 rounded-full px-3 py-1 inline-block">
+                  <span class="text-gray-500 dark:text-gray-400">关键字:</span> {{ keywords[index] }}
+                </div>
+                <!-- 基于sample.txt第7-11行的控制标志动态显示论文信息文本框 -->
+                <div v-if="showPaperBox.length > index && showPaperBox[index] === 1" class="mt-5">
+                  <div v-if="paperData.length > index && paperData[index] && paperData[index].id" :class="[
+                    'p-5 rounded-lg border text-left shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1',
+                    index === 0 ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' :
+                    index === 1 ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' :
+                    index === 2 ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800' :
+                    index === 3 ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800' :
+                    'bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-800'
+                  ]">
+                    <div class="flex items-center mb-2">
+                      <a 
+                        :href="`https://arxiv.org/abs/${paperData[index].id}`" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        class="font-semibold text-ellipsis overflow-hidden block hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-1"
+                        title="点击查看论文"
+                      >
+                        {{ paperData[index].title }}
+                      </a>
+                      <svg class="w-4 h-4 ml-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                      </svg>
+                    </div>
+                    <div class="text-sm line-clamp-3 bg-white/70 dark:bg-gray-800/70 p-3 rounded-md border border-gray-100 dark:border-gray-700">
+                      {{ paperData[index].abstract }}
+                    </div>
+                  </div>
+                  <div v-else class="p-5 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700/50 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    暂无论文数据
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- 显示总结内容 -->
+            <div v-if="summary" class="mt-10 p-8 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg text-center min-h-[140px] text-lg">
+              <div class="max-w-3xl mx-auto">
+                <strong class="text-gray-800 dark:text-gray-100">{{ summary }}</strong>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 原有的欢迎文本 (如果需要保留) -->
+          <div v-else-if="customText" class="mb-12">
+            <h1 class="text-2xl md:text-3xl font-bold py-4 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent whitespace-pre-line">{{ customText }}</h1>
+          </div>
+          <div v-else class="mb-12 max-w-2xl mx-auto">
+            <h1 class="text-2xl md:text-3xl font-bold py-4 text-center">{{ t('newThread.greeting') }}</h1>
+            <h3 class="text-lg px-8 pb-4 text-center text-gray-600 dark:text-gray-300">{{ t('newThread.prompt') }}</h3>
+          </div>
+          <p v-if="customTextError" class="text-sm text-red-500 px-8 mt-3 text-center max-w-md mx-auto bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-800/30">{{ customTextError }}</p>
         </div>
       </div>
       
@@ -198,6 +259,8 @@ const chatStore = useChatStore()
 const settingsStore = useSettingsStore()
 const customText = ref('');
 const customTextError = ref('');
+const sampleTitle = ref('');
+const sampleColumns = ref<string[]>([]);
 const activeModel = ref({
   name: '',
   id: '',
@@ -360,6 +423,14 @@ const modelSelectOpen = ref(false)
 const settingsPopoverOpen = ref(false)
 const chatInputRef = ref<InstanceType<typeof ChatInput> | null>(null)
 
+// 用于存储sample.txt的关键字和总结内容
+const keywords = ref<string[]>([])
+const summary = ref<string>('')
+// 用于存储sample.txt第7-11行的控制标志
+const showPaperBox = ref<number[]>([0, 0, 0, 0, 0])
+// 用于存储paper.txt的论文数据
+const paperData = ref<Array<{id: string, title: string, abstract: string}>>([])
+
 const handleModelUpdate = (model: MODEL_META, providerId: string) => {
   activeModel.value = {
     name: model.name,
@@ -458,7 +529,58 @@ onMounted(async () => {
     console.error('读取自定义欢迎文本失败:', error);
     customTextError.value = '无法读取自定义欢迎文本';
   }
+  
+  // 读取sample.txt文件
+  try {
+    const sampleFileContent = await window.api.readLocalFile('sample.txt');
+    if (sampleFileContent) {
+      const lines = sampleFileContent.trim().split('\n').filter(line => line.trim() !== '');
+      if (lines.length > 0) {
+        // 第一行作为标题
+        sampleTitle.value = lines[0].trim();
+        // 第2-6行作为五列内容
+        if (lines.length >= 6) {
+          sampleColumns.value = lines.slice(1, 6).map(line => line.trim());
+        }
+        // 第7-11行作为控制标志（是否显示论文框）
+        if (lines.length >= 11) {
+          showPaperBox.value = lines.slice(6, 11).map(line => parseInt(line.trim()) || 0);
+        }
+        // 第12-16行作为关键字内容
+        if (lines.length >= 16) {
+          keywords.value = lines.slice(11, 16).map(line => line.trim());
+        }
+        // 第17行作为总结内容
+        if (lines.length >= 17) {
+          summary.value = lines[16].trim();
+        }
+      }
+    }
+  } catch (error) {
+    console.error('读取sample.txt失败:', error);
+  }
+  
+  // 读取paper.txt文件，提取论文数据
+  try {
+    const paperFileContent = await window.api.readLocalFile('paper.txt');
+    if (paperFileContent) {
+      const lines = paperFileContent.trim().split('\n').filter(line => line.trim() !== '');
+      paperData.value = lines.map(line => {
+        const parts = line.split(',');
+        return {
+          id: parts[0]?.trim() || '',
+          title: parts[1]?.trim() || '',
+          abstract: parts.slice(2).join(',').trim() || ''
+        };
+      });
+    }
+  } catch (error) {
+    console.error('读取paper.txt失败:', error);
+  }
 })
+
+// 刷新sample.txt和paper.txt的内容
+
 
 // 原有的最新资讯按钮处理函数已替换为handleProcessNewsAndGenerateQuestions
 
