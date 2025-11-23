@@ -226,6 +226,16 @@ def process_papers(query: str, k1: float = DEFAULT_K1, b: float = DEFAULT_B) -> 
 # ---------------------- API接口定义（同步简化响应模型）----------------------
 app = FastAPI(title="BM25论文筛选API", description="仅需传入查询关键词，返回相关性排序结果（简化字段）")
 
+# 添加CORS中间件以解决跨域问题
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许所有源（生产环境建议指定具体域名）
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有HTTP方法
+    allow_headers=["*"],  # 允许所有请求头
+)
+
 class BM25Request(BaseModel):
     query: str  # 唯一必填参数
     k1: float = DEFAULT_K1
@@ -260,27 +270,43 @@ async def score_papers(request: BM25Request):
         raise HTTPException(status_code=400, detail=str(e))
 
 # ---------------------- 启动逻辑（强制日志输出）----------------------
-if __name__ == "__main__":
-    logger.info("=== BM25论文筛选API 开始启动 ===")
-    logger.info(f"📡 服务配置：{API_HOST}:{API_PORT}")
-    logger.info(f"📄 论文文件路径：{os.path.abspath(PAPERS_CSV_PATH)}")  # 更新为CSV路径
-    logger.info("⚠️  启动后请勿关闭终端（关闭将停止服务）")
-    logger.info("💡 访问 http://localhost:2625/docs 可测试API")
-    
+def start_server():
     try:
+        logger.info("=== BM25论文筛选API 开始启动 ===")
+        logger.info(f"📡 服务配置：{API_HOST}:{API_PORT}")
+        logger.info(f"📄 论文文件路径：{os.path.abspath(PAPERS_CSV_PATH)}")  # 更新为CSV路径
+        logger.info("⚠️  启动后请勿关闭终端（关闭将停止服务）")
+        logger.info("💡 访问 http://localhost:2625/docs 可测试API")
+        
         # 启动服务（添加日志回调，确保启动状态可见）
         uvicorn.run(
             app=app,
             host=API_HOST,
             port=API_PORT,
             log_level="info",
-            access_log=False  # 关闭访问日志，只保留启动日志
+            access_log=True,  # 开启访问日志，便于调试
+            reload=False,  # 生产模式关闭热重载
+            workers=1  # 单工作进程模式
         )
+    except KeyboardInterrupt:
+        logger.info("⏸️  接收到停止信号，正在关闭服务...")
     except Exception as e:
-        logger.error(f"❌ 服务启动失败：{str(e)}")
+        logger.error(f"❌ 服务异常：{str(e)}")
         # 针对常见错误给出提示
         if "address already in use" in str(e).lower():
             logger.error("💡 解决方案：端口2625已被占用，请关闭占用程序，或修改代码中API_PORT为其他端口（如2626）")
         elif "permission denied" in str(e).lower():
             logger.error("💡 解决方案：无权限使用该端口（Windows需以管理员身份运行终端，Linux/Mac需加sudo）")
+        else:
+            logger.error("💡 请检查网络配置和防火墙设置")
+        return False
+    return True
+
+if __name__ == "__main__":
+    # 确保在Windows环境下也能稳定运行
+    success = start_server()
+    if not success:
+        logger.error("❌ 服务启动失败，请检查以上错误信息")
         sys.exit(1)
+    else:
+        logger.info("✅ 服务已停止")

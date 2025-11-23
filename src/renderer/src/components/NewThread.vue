@@ -62,15 +62,16 @@
     </div>
     
     <!-- 主内容区域 -->
-    <div class="flex-1 flex flex-col items-center justify-between relative">
-      <div class="w-full grow flex flex-col items-center justify-center px-4 py-6">
-        <div class="w-full max-w-8xl">
+    <div class="flex-1 flex relative">
+      <!-- 主要内容显示区域 -->
+      <div class="flex-1 flex flex-col items-center justify-center px-4 py-6">
+        <div class="w-full max-w-5xl">
           <!-- 显示sample.txt的内容 -->
           <div v-if="sampleTitle" class="mb-12">
             <div class="mb-6">
               <h1 class="text-2xl md:text-3xl font-bold py-4 text-center text-gray-800 dark:text-gray-100">{{ sampleTitle }}</h1>
             </div>
-            <div v-if="sampleColumns.length === 5" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
+            <div v-if="sampleColumns.length === 5" class="grid grid-cols-1 gap-6 mt-6 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
               <div v-for="(column, index) in sampleColumns" :key="index" class="py-5 px-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/50 text-center shadow-sm hover:shadow-md transition-all duration-300">
                 <div class="text-lg font-medium mb-2">{{ column }}</div>
                 <div v-if="keywords.length > index" class="mt-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700/50 rounded-full px-3 py-1 inline-block">
@@ -133,89 +134,96 @@
         </div>
       </div>
       
-      <!-- 固定在底部的输入框区域 -->
-      <div class="w-full px-4 py-4 pb-16">
-        <ChatInput
-          ref="chatInputRef"
-          key="newThread"
-          variant="newThread"
-          class="w-full"
-          :rows="3"
-          :max-rows="10"
-          :context-length="contextLength"
-          @send="handleSend"
-        >
-          <template #addon-actions>
-            <Popover v-model:open="modelSelectOpen">
-              <PopoverTrigger as-child>
-                <Button
-                  variant="ghost"
-                  class="flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-semibold text-muted-foreground hover:bg-muted/60 hover:text-foreground dark:text-white/70 dark:hover:bg-muted/60 dark:hover:text-white"
-                  size="sm"
-                >
-                  <ModelIcon
-                    class="w-4 h-4"
-                    :model-id="activeModel.providerId"
-                    :is-dark="themeStore.isDark"
-                  ></ModelIcon>
-                  <span class="text-xs font-semibold truncate max-w-[140px] text-foreground">{{
-                    name
-                  }}</span>
-                  <Badge
-                    v-for="tag in activeModel.tags"
-                    :key="tag"
-                    variant="outline"
-                    class="py-0 px-1 rounded-lg text-[10px]"
-                  >
-                    {{ t(`model.tags.${tag}`) }}</Badge
-                  >
-                  <Icon icon="lucide:chevron-right" class="w-4 h-4 text-muted-foreground" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" class="w-80 p-0">
-                <ModelSelect
-                  :type="[ModelType.Chat, ModelType.ImageGeneration]"
-                  @update:model="handleModelUpdate"
-                />
-              </PopoverContent>
-            </Popover>
-
-            <ScrollablePopover
-              v-model:open="settingsPopoverOpen"
-              align="end"
-              content-class="w-80"
-              :enable-scrollable="true"
+      <!-- 固定在右侧的输入框区域 -->
+      <div class="w-80 h-full border-l border-gray-200 dark:border-gray-700 flex flex-col">
+        <div class="flex-1 flex flex-col p-4">
+          <div class="mb-4">
+            <h4 class="text-sm font-semibold text-gray-500 dark:text-gray-400">输入你的问题</h4>
+          </div>
+          <div class="flex-1 flex flex-col">
+            <ChatInput
+              ref="chatInputRef"
+              key="newThread"
+              variant="newThread"
+              class="flex-1"
+              :rows="3"
+              :max-rows="10"
+              :context-length="contextLength"
+              @send="handleSend"
             >
-              <template #trigger>
-                <Button
-                  class="h-7 w-7 rounded-md border border-border/60 hover:border-border dark:border-white/10 dark:bg-white/[0.04] dark:text-white/70 dark:hover:border-white/25 dark:hover:bg-white/15 dark:hover:text-white"
-                  size="icon"
-                  variant="outline"
+              <template #addon-actions>
+                <Popover v-model:open="modelSelectOpen">
+                  <PopoverTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      class="flex items-center gap-1.5 h-7 px-2 rounded-md text-xs font-semibold text-muted-foreground hover:bg-muted/60 hover:text-foreground dark:text-white/70 dark:hover:bg-muted/60 dark:hover:text-white"
+                      size="sm"
+                    >
+                      <ModelIcon
+                        class="w-4 h-4"
+                        :model-id="activeModel.providerId"
+                        :is-dark="themeStore.isDark"
+                      ></ModelIcon>
+                      <span class="text-xs font-semibold truncate max-w-[140px] text-foreground">{{
+                        name
+                      }}</span>
+                      <Badge
+                        v-for="tag in activeModel.tags"
+                        :key="tag"
+                        variant="outline"
+                        class="py-0 px-1 rounded-lg text-[10px]"
+                      >
+                        {{ t(`model.tags.${tag}`) }}</Badge
+                      >
+                      <Icon icon="lucide:chevron-right" class="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" class="w-80 p-0">
+                    <ModelSelect
+                      :type="[ModelType.Chat, ModelType.ImageGeneration]"
+                      @update:model="handleModelUpdate"
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <ScrollablePopover
+                  v-model:open="settingsPopoverOpen"
+                  align="end"
+                  content-class="w-80"
+                  :enable-scrollable="true"
                 >
-                  <Icon icon="lucide:settings-2" class="w-4 h-4" />
-                </Button>
+                  <template #trigger>
+                    <Button
+                      class="h-7 w-7 rounded-md border border-border/60 hover:border-border dark:border-white/10 dark:bg-white/[0.04] dark:text-white/70 dark:hover:border-white/25 dark:hover:bg-white/15 dark:hover:text-white"
+                      size="icon"
+                      variant="outline"
+                    >
+                      <Icon icon="lucide:settings-2" class="w-4 h-4" />
+                    </Button>
+                  </template>
+                  <ChatConfig
+                    v-model:temperature="temperature"
+                    v-model:context-length="contextLength"
+                    v-model:max-tokens="maxTokens"
+                    v-model:system-prompt="systemPrompt"
+                    v-model:artifacts="artifacts"
+                    v-model:thinking-budget="thinkingBudget"
+                    v-model:enable-search="enableSearch"
+                    v-model:forced-search="forcedSearch"
+                    v-model:search-strategy="searchStrategy"
+                    v-model:reasoning-effort="reasoningEffort"
+                    v-model:verbosity="verbosity"
+                    :context-length-limit="contextLengthLimit"
+                    :max-tokens-limit="maxTokensLimit"
+                    :model-id="activeModel?.id"
+                    :provider-id="activeModel?.providerId"
+                    :model-type="activeModel?.type"
+                  />
+                </ScrollablePopover>
               </template>
-              <ChatConfig
-                v-model:temperature="temperature"
-                v-model:context-length="contextLength"
-                v-model:max-tokens="maxTokens"
-                v-model:system-prompt="systemPrompt"
-                v-model:artifacts="artifacts"
-                v-model:thinking-budget="thinkingBudget"
-                v-model:enable-search="enableSearch"
-                v-model:forced-search="forcedSearch"
-                v-model:search-strategy="searchStrategy"
-                v-model:reasoning-effort="reasoningEffort"
-                v-model:verbosity="verbosity"
-                :context-length-limit="contextLengthLimit"
-                :max-tokens-limit="maxTokensLimit"
-                :model-id="activeModel?.id"
-                :provider-id="activeModel?.providerId"
-                :model-type="activeModel?.type"
-              />
-            </ScrollablePopover>
-          </template>
-        </ChatInput>
+            </ChatInput>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -613,113 +621,121 @@ const handleActionButtonClick = async () => {
 const handleRefreshButtonClick = async () => {
   console.log('刷新按钮被点击');
   try {
-    let userPref = '';
-    try {
-      userPref = (await window.api.readLocalFile('user-preferences.txt')) || '';
-      console.log('读取到的用户偏好:', userPref);
-    } catch (err) {
-      console.warn('无法读取 user-preferences.txt，继续使用空偏好', err);
-      userPref = '';
-    }
-
-    const combinedQuery = `用fetch,url=https://news.aibase.cn/news,max_length=1000,结果只包含五条新闻总结,每条二十字以内,不要有其他内容`;
-    console.log('构建的查询消息:', combinedQuery);
-
-    const tabId = window.api.getWebContentsId();
+    // 显示正在处理的提示
+    alert('开始执行问题生成，将等待30秒后处理...');
     
+    // 等待30秒
+    console.log('等待30秒...');
+    await new Promise((r) => setTimeout(r, 1));
+    
+    // 读取sample.txt文件
+    let sampleContent = '';
     try {
-      const threadId = await threadPresenter.createConversation(
-        '欢迎语刷新', 
-        {
-          providerId: activeModel.value.providerId,
-          modelId: activeModel.value.id,
-          systemPrompt: systemPrompt.value,
-          temperature: temperature.value,
-          contextLength: contextLength.value,
-          maxTokens: maxTokens.value,
-          artifacts: artifacts.value as 0 | 1,
-          thinkingBudget: thinkingBudget.value,
-          enableSearch: enableSearch.value,
-          forcedSearch: forcedSearch.value,
-          searchStrategy: searchStrategy.value,
-          reasoningEffort: reasoningEffort.value,
-          verbosity: verbosity.value,
-          enabledMcpTools: chatStore.chatConfig.enabledMcpTools
-        } as any,
-        tabId
-      );
-      console.log('创建的线程ID:', threadId);
-      
-      const messageContent = JSON.stringify({
-        text: combinedQuery,
-        files: [],
-        links: [],
-        think: false,
-        search: false
-      });
-      
-      await threadPresenter.sendMessage(threadId, messageContent, "user");
-      
-      await threadPresenter.startStreamCompletion(threadId, undefined, {});
-      
-      const extractAssistantText = (assistantMsg: any) => {
-        if (!assistantMsg || !assistantMsg.content) return '';
-        const parts: string[] = [];
-        for (const block of assistantMsg.content) {
-          if (!block) continue;
-          if (block.type === 'content' && block.content) parts.push(block.content);
-          else if (block.type === 'reasoning_content' && block.content) parts.push(block.content);
-          else if (block.type === 'tool_call' && block.tool_call && block.tool_call.response) parts.push(block.tool_call.response);
-          else if (typeof block.content === 'string') parts.push(block.content);
-        }
-        return parts.join('\n').trim();
-      }
-
-      let assistantText = '';
-      const maxAttempts = 60;
-      for (let i = 0; i < maxAttempts; i++) {
-        await new Promise((r) => setTimeout(r, 1000));
-        try {
-          const msgsRes: any = await threadPresenter.getMessages(threadId, 1, 100)
-          const assistantMsg = msgsRes?.list?.find((m: any) => m.role === 'assistant' && m.content && m.content.length > 0)
-          if (assistantMsg) {
-            assistantText = extractAssistantText(assistantMsg)
-            if (assistantText && assistantText.length > 0) break
-          }
-        } catch (err) {
-          console.warn('获取消息时出错，稍候重试', err)
-        }
-      }
-
-      if (!assistantText) {
-        console.log('未获取到助手响应，使用默认文本');
-        assistantText = "感谢您的使用！我是您的AI助手，随时为您提供帮助。请随时提问，我会尽力为您解答。";
-      }
-
-      console.log('最终使用的文本:', assistantText);
+      sampleContent = await window.api.readLocalFile('sample.txt');
+      console.log('读取到的sample.txt内容:', sampleContent);
+    } catch (err) {
+      console.error('无法读取sample.txt文件:', err);
+      alert('无法读取sample.txt文件');
+      return;
+    }
+    
+    // 解析sample.txt的7-11行
+    const lines = sampleContent.split('\n');
+    const lines7to11 = lines.slice(6, 11); // 索引6-10对应第7-11行
+    console.log('sample.txt的7-11行:', lines7to11);
+    
+    // 检查是否包含'1'
+    const containsOne = lines7to11.some(line => line.trim() === '1');
+    console.log('是否包含1:', containsOne);
+    
+    // 准备写入paper.txt的内容
+    let paperContent = ['1', '', '', '', '1']; // 初始化为5行
+    
+    if (containsOne) {
+      // 如果包含1，读取12-16行作为参数
+      const lines12to16 = lines.slice(11, 16); // 索引11-15对应第12-16行
+      const queryParam = lines12to16.join('\n').trim();
+      console.log('发送给BM25接口的参数:', queryParam);
       
       try {
-        const lines = assistantText.split('\n');
-        const lastNineLines = lines.slice(-9).join('\n').trim();
+        // 使用fetch API发送请求，参考test_bm25_friendly.html的方法
+        console.log('准备发送BM25请求(fetch API)...');
         
-        await window.api.writeLocalFile('custom-welcome.txt', lastNineLines);
-        customText.value = lastNineLines;
-        customTextError.value = '';
-        console.log('成功写入custom-welcome.txt文件（只保留最后九行）');
-      } catch (error) {
-        console.error('写入custom-welcome.txt文件失败:', error);
-        customTextError.value = '无法写入自定义欢迎文本';
-        alert('保存失败，请检查应用是否有写入权限');
+        const apiUrl = 'http://localhost:2625/bm25/score';
+        const requestBody = {
+          query: '1',
+          k1: 0.9,
+          b: 0.5
+        };
+        
+        const startTime = performance.now();
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+        const endTime = performance.now();
+        
+        const responseTime = Math.round(endTime - startTime);
+        console.log(`请求完成，状态码: ${response.status}，响应时间: ${responseTime}ms`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP错误！状态码：${response.status}`);
+        }
+        
+        const responseData = await response.json();
+        console.log('BM25接口返回结果:', responseData);
+        
+        // 正确提取results字段中的论文列表
+        const papers = ((responseData as { results?: any[] }).results || []).slice(0, 3);
+        console.log('提取的论文列表数量:', papers.length);
+        
+        // 填充paperContent数组
+        papers.forEach((paper: any, index: number) => {
+          const title = paper.title || '无标题';
+          const abstract = paper.abstract || '无摘要';
+          paperContent[index + 1] = `${title}\n${abstract}`; // 索引1-3对应第2-4行
+        });
+        
+        // 确保只有5行内容
+        paperContent = paperContent.slice(0, 5);
+        console.log('准备写入paper.txt的内容:', paperContent);
+      } catch (err) {
+        // 改进的错误处理
+        console.error('调用BM25接口失败:', err);
+        let errorMessage = '连接BM25服务失败';
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        } else {
+          errorMessage = String(err);
+        }
+        alert(`错误: ${errorMessage}`);
+        // 即使接口调用失败，也继续写入默认内容
+        paperContent = ['1', '默认论文1\n这是一篇默认论文摘要', '默认论文2\n这是第二篇默认论文摘要', '默认论文3\n这是第三篇默认论文摘要', '1'];
       }
+    } else {
+      // 如果不包含1，写入默认内容
+      paperContent = ['1', '默认论文1\n这是一篇默认论文摘要', '默认论文2\n这是第二篇默认论文摘要', '默认论文3\n这是第三篇默认论文摘要', '1'];
+      console.log('不包含1，写入默认内容');
+    }
+    
+    // 写入paper.txt文件
+    try {
+      await window.api.writeLocalFile('paper.txt', paperContent.join('\n'));
+      console.log('成功写入paper.txt文件');
+      alert('paper.txt文件已成功更新');
     } catch (error) {
-      console.error('处理刷新请求时出错:', error);
-      alert(`刷新失败: ${(error as Error).message || '未知错误'}`);
+      console.error('写入paper.txt文件失败:', error);
+      alert('写入paper.txt文件失败');
     }
   } catch (error) {
     console.error('刷新按钮处理失败:', error);
-    alert(`刷新失败: ${(error as Error).message || '未知错误'}`);
+    alert(`操作失败: ${(error as Error).message || '未知错误'}`);
   }
-}
+};
 
 const handleQuestionGenerateClick = () => {
   router.push('/question')

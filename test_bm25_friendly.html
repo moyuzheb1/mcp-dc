@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BM25论文检索系统 - 测试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e8e8e8;
+            margin-bottom: 25px;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            color: #4facfe;
+            border-bottom-color: #4facfe;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e8e8e8;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .response-section {
+            margin-top: 30px;
+        }
+        
+        .tabs-content {
+            display: none;
+        }
+        
+        .tabs-content.active {
+            display: block;
+        }
+        
+        #response-json {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        #response-formatted {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 0;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .paper-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .paper-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .paper-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .paper-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+            margin-right: 15px;
+        }
+        
+        .paper-score {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .paper-abstract {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .paper-id {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .status.success {
+            background: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+        }
+        
+        .status.error {
+            background: #fff1f0;
+            color: #ff4d4f;
+            border: 1px solid #ffccc7;
+        }
+        
+        .status.info {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+        
+        .status-icon {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+        
+        .examples {
+            background: #f0f8ff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .examples h4 {
+            color: #1890ff;
+            margin-bottom: 12px;
+        }
+        
+        .example-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .example-tag {
+            background: #e6f7ff;
+            color: #1890ff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .example-tag:hover {
+            background: #1890ff;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .paper-header {
+                flex-direction: column;
+            }
+            
+            .paper-score {
+                margin-top: 10px;
+                align-self: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>BM25论文检索系统</h1>
+            <p>快速测试您的BM25 API接口，实时获取论文检索结果</p>
+        </div>
+        
+        <div class="content">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('test')">API测试</div>
+                <div class="tab" onclick="switchTab('results')">检索结果</div>
+            </div>
+            
+            <div id="test-tab" class="tabs-content active">
+                <div class="form-group">
+                    <label for="api-url">API地址</label>
+                    <input type="text" id="api-url" value="http://127.0.0.1:2625/bm25/score" placeholder="输入API地址">
+                </div>
+                
+                <div class="form-group">
+                    <label for="query">检索关键词</label>
+                    <input type="text" id="query" value="1" placeholder="输入检索关键词">
+                </div>
+                
+                <div style="display: flex; gap: 20px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="k1">k1参数</label>
+                        <input type="number" id="k1" value="0.9" min="0.1" max="3.0" step="0.1">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="b">b参数</label>
+                        <input type="number" id="b" value="0.5" min="0" max="1.0" step="0.1">
+                    </div>
+                </div>
+                
+                <div class="examples">
+                    <h4>常用检索示例</h4>
+                    <div class="example-tags">
+                        <div class="example-tag" onclick="setQuery('neural network')">神经网络</div>
+                        <div class="example-tag" onclick="setQuery('natural language processing')">自然语言处理</div>
+                        <div class="example-tag" onclick="setQuery('computer vision')">计算机视觉</div>
+                        <div class="example-tag" onclick="setQuery('large language model')">大语言模型</div>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-primary" onclick="testApi()">发送请求</button>
+                    <button class="btn-secondary" onclick="clearResponse()">清除结果</button>
+                </div>
+                
+                <div id="status" class="status info" style="display: none;">
+                    <span class="status-icon">ℹ️</span>
+                    <span id="status-message"></span>
+                </div>
+            </div>
+            
+            <div id="results-tab" class="tabs-content">
+                <div class="tabs">
+                    <div class="tab active" onclick="switchResultView('formatted')">格式化视图</div>
+                    <div class="tab" onclick="switchResultView('json')">JSON视图</div>
+                </div>
+                
+                <div id="response-formatted" class="tabs-content active">
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        请先发送请求获取结果
+                    </div>
+                </div>
+                
+                <div id="response-json" class="tabs-content">
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        请先发送请求获取结果
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let responseData = null;
+        
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tabs-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            event.target.classList.add('active');
+            document.getElementById(tabId + '-tab').classList.add('active');
+        }
+        
+        function switchResultView(view) {
+            const tabs = document.querySelectorAll('#results-tab .tab');
+            const contents = document.querySelectorAll('#results-tab .tabs-content');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            contents.forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById('response-' + view).classList.add('active');
+        }
+        
+        function setQuery(query) {
+            document.getElementById('query').value = query;
+        }
+        
+        function showStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            const messageEl = document.getElementById('status-message');
+            
+            statusEl.className = 'status ' + type;
+            messageEl.textContent = message;
+            statusEl.style.display = 'flex';
+        }
+        
+        async function testApi() {
+            const apiUrl = document.getElementById('api-url').value;
+            const query = document.getElementById('query').value;
+            const k1 = parseFloat(document.getElementById('k1').value);
+            const b = parseFloat(document.getElementById('b').value);
+            
+            if (!query) {
+                showStatus('error', '请输入检索关键词');
+                return;
+            }
+            
+            showStatus('info', '正在发送请求...');
+            
+            try {
+                const startTime = performance.now();
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        k1: k1,
+                        b: b
+                    })
+                });
+                const endTime = performance.now();
+                
+                const responseTime = Math.round(endTime - startTime);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误！状态码：${response.status}`);
+                }
+                
+                responseData = await response.json();
+                
+                showStatus('success', `✅ 请求成功！状态码：${response.status}，响应时间：${responseTime}ms`);
+                
+                // 显示结果
+                updateResults();
+                
+                // 切换到结果标签页
+                document.querySelectorAll('.tab')[1].click();
+            } catch (error) {
+                showStatus('error', `❌ 请求失败：${error.message}`);
+                
+                // 清空结果
+                document.getElementById('response-formatted').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #ff4d4f;">
+                        <h3>请求失败</h3>
+                        <p>${error.message}</p>
+                        <p style="font-size: 14px; color: #999; margin-top: 10px;">
+                            请检查：<br>
+                            1. API服务是否正在运行<br>
+                            2. 端口2625是否正确<br>
+                            3. 网络连接是否正常
+                        </p>
+                    </div>
+                `;
+                
+                document.getElementById('response-json').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        function updateResults() {
+            if (!responseData) return;
+            
+            // 格式化视图
+            let formattedHtml = '';
+            
+            if (responseData.results && responseData.results.length > 0) {
+                responseData.results.forEach(paper => {
+                    formattedHtml += `
+                        <div class="paper-card">
+                            <div class="paper-header">
+                                <div class="paper-title">${paper.title}</div>
+                                <div class="paper-score">${paper.bm25_score}</div>
+                            </div>
+                            <div class="paper-abstract">${paper.original_abstract}</div>
+                            <div class="paper-id">ID: ${paper.id}</div>
+                        </div>
+                    `;
+                });
+            } else {
+                formattedHtml = `
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        <h3>未找到相关论文</h3>
+                        <p>请尝试使用其他关键词</p>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('response-formatted').innerHTML = formattedHtml;
+            
+            // JSON视图
+            document.getElementById('response-json').textContent = JSON.stringify(responseData, null, 2);
+        }
+        
+        function clearResponse() {
+            responseData = null;
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('response-formatted').innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #999;">
+                    请先发送请求获取结果
+                </div>
+            `;
+            document.getElementById('response-json').textContent = `请先发送请求获取结果`;
+        }
+        
+        // 页面加载时自动检查服务状态
+        window.onload = function() {
+            console.log('页面加载完成，可以开始测试API');
+        };
+    </script>
+</body>
+</html>
