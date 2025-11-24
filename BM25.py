@@ -190,6 +190,8 @@ def load_index(cache_file=INDEX_CACHE_FILE) -> tuple:
 
 # ---------------------- 【优化后】结果处理函数 ----------------------
 def process_papers(query: str, k1: float = DEFAULT_K1, b: float = DEFAULT_B) -> List[Dict[str, Any]]:
+    # 打印查询参数
+    logger.info(f"查询参数: {query}")
     global GLOBAL_BM25_INDEX
 
     if not GLOBAL_PAPERS:
@@ -258,6 +260,8 @@ class BM25Response(BaseModel):
 
 @app.post("/bm25/score", response_model=BM25Response, summary="获取论文相关性评分")
 async def score_papers(request: BM25Request):
+    # 打印查询参数
+    logger.info(f"查询参数: {request.query}")
     try:
         results = process_papers(query=request.query, k1=request.k1, b=request.b)
         return {

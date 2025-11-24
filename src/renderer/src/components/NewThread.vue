@@ -573,14 +573,25 @@ onMounted(async () => {
     const paperFileContent = await window.api.readLocalFile('paper.txt');
     if (paperFileContent) {
       const lines = paperFileContent.trim().split('\n').filter(line => line.trim() !== '');
-      paperData.value = lines.map(line => {
-        const parts = line.split(',');
-        return {
-          id: parts[0]?.trim() || '',
-          title: parts[1]?.trim() || '',
-          abstract: parts.slice(2).join(',').trim() || ''
-        };
-      });
+      // 根据特定行号映射关系构建paperData：id在1,4,7,10,13行，标题在2,5,8,11,14行，摘要在3,6,9,12,15行
+      const newPaperData: Array<{id: string, title: string, abstract: string}> = [];
+      // 处理5组数据（最多）
+      for (let i = 0; i < 5; i++) {
+        // 计算当前组的id行索引（从0开始）
+        const idIndex = i * 3;
+        const titleIndex = idIndex + 1;
+        const abstractIndex = idIndex + 2;
+        
+        // 检查索引是否有效
+        if (idIndex < lines.length && titleIndex < lines.length && abstractIndex < lines.length) {
+          newPaperData.push({
+            id: lines[idIndex].trim(),
+            title: lines[titleIndex].trim(),
+            abstract: lines[abstractIndex].trim()
+          });
+        }
+      }
+      paperData.value = newPaperData;
     }
   } catch (error) {
     console.error('读取paper.txt失败:', error);
@@ -626,7 +637,6 @@ const handleRefreshButtonClick = async () => {
     
     // 等待30秒
     console.log('等待30秒...');
-    await new Promise((r) => setTimeout(r, 1));
     
     // 读取sample.txt文件
     let sampleContent = '';
@@ -639,92 +649,98 @@ const handleRefreshButtonClick = async () => {
       return;
     }
     
-    // 解析sample.txt的7-11行
+    // 解析sample.txt的所有行
     const lines = sampleContent.split('\n');
-    const lines7to11 = lines.slice(6, 11); // 索引6-10对应第7-11行
-    console.log('sample.txt的7-11行:', lines7to11);
+    console.log('sample.txt总行数:', lines.length);
     
-    // 检查是否包含'1'
-    const containsOne = lines7to11.some(line => line.trim() === '1');
-    console.log('是否包含1:', containsOne);
+    // 初始化paperContent数组 - 使用二维数组以便处理多行内容
+    let paperContent: string[][] = []; // 初始化为空数组
     
-    // 准备写入paper.txt的内容
-    let paperContent = ['1', '', '', '', '1']; // 初始化为5行
+    let hasValidCalls = false;
     
-    if (containsOne) {
-      // 如果包含1，读取12-16行作为参数
-      const lines12to16 = lines.slice(11, 16); // 索引11-15对应第12-16行
-      const queryParam = lines12to16.join('\n').trim();
-      console.log('发送给BM25接口的参数:', queryParam);
-      
-      try {
-        // 使用fetch API发送请求，参考test_bm25_friendly.html的方法
-        console.log('准备发送BM25请求(fetch API)...');
-        
-        const apiUrl = 'http://localhost:2625/bm25/score';
-        const requestBody = {
-          query: '1',
-          k1: 0.9,
-          b: 0.5
-        };
-        
-        const startTime = performance.now();
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(requestBody)
-        });
-        const endTime = performance.now();
-        
-        const responseTime = Math.round(endTime - startTime);
-        console.log(`请求完成，状态码: ${response.status}，响应时间: ${responseTime}ms`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP错误！状态码：${response.status}`);
-        }
-        
-        const responseData = await response.json();
-        console.log('BM25接口返回结果:', responseData);
-        
-        // 正确提取results字段中的论文列表
-        const papers = ((responseData as { results?: any[] }).results || []).slice(0, 3);
-        console.log('提取的论文列表数量:', papers.length);
-        
-        // 填充paperContent数组
-        papers.forEach((paper: any, index: number) => {
-          const title = paper.title || '无标题';
-          const abstract = paper.abstract || '无摘要';
-          paperContent[index + 1] = `${title}\n${abstract}`; // 索引1-3对应第2-4行
-        });
-        
-        // 确保只有5行内容
-        paperContent = paperContent.slice(0, 5);
-        console.log('准备写入paper.txt的内容:', paperContent);
-      } catch (err) {
-        // 改进的错误处理
-        console.error('调用BM25接口失败:', err);
-        let errorMessage = '连接BM25服务失败';
-        if (err instanceof Error) {
-          errorMessage = err.message;
-        } else {
-          errorMessage = String(err);
-        }
-        alert(`错误: ${errorMessage}`);
-        // 即使接口调用失败，也继续写入默认内容
-        paperContent = ['1', '默认论文1\n这是一篇默认论文摘要', '默认论文2\n这是第二篇默认论文摘要', '默认论文3\n这是第三篇默认论文摘要', '1'];
+    // 定义检查和调用接口的通用函数
+    const checkLineAndCallApi = async (lineIndex: number, paramLineIndex: number, lineNum: number, paramLineNum: number, paperContentIndex: number) => {
+      // 确保paperContent有足够的子数组
+      while (paperContent.length <= paperContentIndex) {
+        paperContent.push([]);
       }
-    } else {
-      // 如果不包含1，写入默认内容
-      paperContent = ['1', '默认论文1\n这是一篇默认论文摘要', '默认论文2\n这是第二篇默认论文摘要', '默认论文3\n这是第三篇默认论文摘要', '1'];
-      console.log('不包含1，写入默认内容');
+      
+      // 检查指定行是否包含'1'或'0'
+      if (lines.length > lineIndex) {
+        const lineContent = lines[lineIndex].trim();
+        
+        if (lineContent === '1') {
+          console.log(`第${lineNum}行包含1，准备使用第${paramLineNum}行内容作为参数调用接口`);
+          // 确保参数行存在
+          if (lines.length > paramLineIndex) {
+            // 获取参数行内容并去除首尾空白
+            const queryParam = lines[paramLineIndex].trim();
+            console.log(`第${lineNum}行对应的参数(第${paramLineNum}行内容):`, queryParam);
+            
+            // 只有当参数不为空时才调用接口
+            if (queryParam) {
+              const response = await callBM25Api(queryParam);
+              if (response && response.length > 0) {
+                // 取第一个结果，标题和摘要分别存储为两行
+                const paper = response[0];
+                const title = paper.title || '无标题';
+                const abstract = paper.original_abstract || '无摘要';
+                const id = paper.id || '未知ID';
+                paperContent[paperContentIndex] = [id, title, abstract]; // id一行，标题一行，摘要一行
+                hasValidCalls = true;
+                console.log(`已成功获取第${lineNum}行参数的论文，存储为id、标题和摘要三行`);
+              }
+            } else {
+              console.warn(`第${paramLineNum}行内容为空，跳过API调用`);
+            }
+          } else {
+            console.warn(`第${paramLineNum}行不存在`);
+          }
+        } else if (lineContent === '0') {
+          // 如果包含'0'，写入三行'1'
+          console.log(`第${lineNum}行包含0，设置为三行'1'`);
+          paperContent[paperContentIndex] = ['1', '1', '1'];
+          hasValidCalls = true;
+        }
+        // 其他情况保持默认的['1']
+      }
+    };
+    
+    // 按行分别处理第7-11行
+    // 第7行(索引6) -> 第12行(索引11) -> 存储到paperContent[1]
+    await checkLineAndCallApi(6, 11, 7, 12, 1);
+    // 第8行(索引7) -> 第13行(索引12) -> 存储到paperContent[2]
+    await checkLineAndCallApi(7, 12, 8, 13, 2);
+    // 第9行(索引8) -> 第14行(索引13) -> 存储到paperContent[3]
+    await checkLineAndCallApi(8, 13, 9, 14, 3);
+    // 第10行(索引9) -> 第15行(索引14) -> 存储到paperContent[4]
+    await checkLineAndCallApi(9, 14, 10, 15, 4);
+    // 第11行(索引10) -> 第16行(索引15) -> 存储到paperContent[5]
+    await checkLineAndCallApi(10, 15, 11, 16, 5);
+    
+    if (!hasValidCalls) {
+      // 如果没有有效的调用，使用默认内容
+      console.log('没有有效的API调用，使用默认内容');
+      // 使用二维数组结构，包含id、标题和摘要三行格式
+      paperContent = [
+        ['default-id-1', '默认论文标题1', '这是默认论文1的摘要'], // 第一组（包含id、标题和摘要）
+        ['default-id-2', '默认论文标题2', '这是默认论文2的摘要'], // 第二组
+        ['default-id-3', '默认论文标题3', '这是默认论文3的摘要'], // 第三组
+        ['1']  // 最后一行
+      ];
     }
+    
+    // 展平二维数组为一维数组，用于写入文件
+    const flattenedContent: string[] = []; 
+    paperContent.forEach(subArray => {
+      subArray.forEach(line => flattenedContent.push(line));
+    });
+    
+    console.log('准备写入paper.txt的内容:', flattenedContent);
     
     // 写入paper.txt文件
     try {
-      await window.api.writeLocalFile('paper.txt', paperContent.join('\n'));
+      await window.api.writeLocalFile('paper.txt', flattenedContent.join('\n'));
       console.log('成功写入paper.txt文件');
       alert('paper.txt文件已成功更新');
     } catch (error) {
@@ -734,6 +750,59 @@ const handleRefreshButtonClick = async () => {
   } catch (error) {
     console.error('刷新按钮处理失败:', error);
     alert(`操作失败: ${(error as Error).message || '未知错误'}`);
+  }
+};
+
+// BM25接口调用函数
+const callBM25Api = async (query: string): Promise<any[]> => {
+  try {
+    console.log('准备发送BM25请求，查询参数:', query);
+    
+    const apiUrl = 'http://localhost:2625/bm25/score';
+    const requestBody = {
+      query: query,
+      k1: 0.9,
+      b: 0.5
+    };
+    
+    const startTime = performance.now();
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+    const endTime = performance.now();
+    
+    const responseTime = Math.round(endTime - startTime);
+    console.log(`BM25请求完成，状态码: ${response.status}，响应时间: ${responseTime}ms`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP错误！状态码：${response.status}`);
+    }
+    
+    const responseData = await response.json();
+    console.log('BM25接口返回结果:', responseData);
+    
+    // 正确提取results字段中的论文列表
+    const papers = ((responseData as { results?: any[] }).results || []);
+    console.log(`本次调用返回的论文数量:`, papers.length);
+    
+    return papers;
+  } catch (err) {
+    // 改进的错误处理
+    console.error('调用BM25接口失败:', err);
+    let errorMessage = '连接BM25服务失败';
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    } else {
+      errorMessage = String(err);
+    }
+    // 不在这里显示alert，避免多次调用时弹出多个alert
+    console.warn(`警告: ${errorMessage}`);
+    return [];
   }
 };
 
