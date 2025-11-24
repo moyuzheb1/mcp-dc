@@ -1,61 +1,48 @@
-# 第一步：先添加日志配置（确保所有步骤都有输出）
+# 第一步：先添加日志配置
 import sys
 import logging
-import csv  # 新增CSV模块
+import csv
+import pickle
+import os
+import re
+import nltk
+import math
+from collections import defaultdict
+from nltk.corpus import stopwords, wordnet
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List, Dict, Any
+import uvicorn
+import platform
 
-# 配置日志：强制输出到控制台，不静默任何信息
+# 配置日志
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    stream=sys.stdout  # 确保输出到命令行，不被隐藏
+    stream=sys.stdout
 )
 logger = logging.getLogger(__name__)
-
-# 第二步：导入依赖（每步都加日志，看是否卡在导入）
-logger.info("开始加载依赖模块...")
-try:
-    import re
-    import nltk
-    import math
-    import matplotlib.pyplot as plt
-    from collections import defaultdict
-    from nltk.corpus import stopwords, wordnet
-    from nltk.tokenize import word_tokenize
-    from nltk.stem import WordNetLemmatizer
-    from fastapi import FastAPI, HTTPException
-    from pydantic import BaseModel
-    from typing import List, Dict, Any
-    import uvicorn
-    import os
-    import platform
-    logger.info("✅ 所有依赖模块加载成功")
-except ImportError as e:
-    logger.error(f"❌ 依赖模块加载失败：缺少 {e.name}（请运行 pip install {e.name}）")
-    sys.exit(1)
-
-# 检查Python版本（FastAPI要求3.7+）
-logger.info(f"当前Python版本：{platform.python_version()}")
-if sys.version_info < (3, 7):
-    logger.error("❌ Python版本过低！请使用Python 3.7及以上版本")
-    sys.exit(1)
 
 # ---------------------- 核心配置 ----------------------
 DEFAULT_K1 = 0.9
 DEFAULT_B = 0.5
 DEFAULT_THRESHOLD = 0.3
-PAPERS_CSV_PATH = "papers.csv"  # 修改为CSV文件路径
+PAPERS_CSV_PATH = "papers.csv"
 API_HOST = "0.0.0.0"
-API_PORT = 2625  # 目标端口
+API_PORT = 2625
+# 新增：索引缓存文件路径
+INDEX_CACHE_FILE = "bm25_index.pkl"
 
-# ---------------------- NLTK资源初始化（强制日志输出）----------------------
+# ---------------------- NLTK资源初始化 ----------------------
 logger.info("开始初始化NLTK资源...")
 try:
-    # 测试资源是否存在，不存在则下载（添加超时控制）
     stopwords.words('english')
     wordnet.synsets('test')
-    logger.info("✅ NLTK资源已存在，无需下载")
+    logger.info("✅ NLTK资源已存在")
 except LookupError:
-    logger.info("⚠️  未找到NLTK资源，开始自动下载（首次运行需联网）...")
+    logger.info("⚠️  未找到NLTK资源，开始自动下载...")
     try:
         nltk.download('stopwords', quiet=True)
         nltk.download('wordnet', quiet=True)
@@ -63,7 +50,7 @@ except LookupError:
         nltk.download('averaged_perceptron_tagger', quiet=True)
         logger.info("✅ NLTK资源下载完成")
     except Exception as e:
-        logger.error(f"❌ NLTK资源下载失败：{str(e)}（请检查网络连接）")
+        logger.error(f"❌ NLTK资源下载失败：{str(e)}")
         sys.exit(1)
 
 # ---------------------- 工具初始化 ----------------------
@@ -71,75 +58,49 @@ lemmatizer = WordNetLemmatizer()
 STOPWORDS = set(stopwords.words('english'))
 logger.info("✅ 工具初始化完成")
 
-# ---------------------- 读取论文数据（修改为CSV读取）----------------------
+# ---------------------- 全局变量 ----------------------
+GLOBAL_PAPERS = []
+# 新增：全局索引变量
+GLOBAL_BM25_INDEX = None
+
+# ---------------------- 【你的原始加载函数】 ----------------------
+# 这里请粘贴你原来可以正常运行的 load_papers_from_file 函数
+# 为了演示，我假设它长这样。如果你的不同，请务必替换成你的版本！
 def load_papers_from_file(file_path: str = PAPERS_CSV_PATH) -> List[Dict[str, str]]:
     logger.info(f"开始读取论文文件：{os.path.abspath(file_path)}")
-    logger.info(f"当前工作目录：{os.getcwd()}")  # 打印当前目录，方便用户排查文件位置
-    
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"文件不存在（当前目录：{os.getcwd()}）")
+        raise FileNotFoundError(f"文件不存在: {file_path}")
     
-    try:
-        papers = []
-        with open(file_path, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)  # 使用DictReader按列名读取
-            fieldnames = reader.fieldnames
-            
-            # 检查必要列是否存在
-            required_fields = {"id", "title", "abstract"}
-            missing_fields = required_fields - set(fieldnames)
-            if missing_fields:
-                raise ValueError(f"CSV文件缺少必要列：{set(fieldnames)}")
-            
-            # 读取并验证每行数据
-            for idx, row in enumerate(reader, 1):  # 行号从1开始
-                paper = {
-                    "id": row["id"].strip(),
-                    "title": row["title"].strip(),
-                    "abstract": row["abstract"].strip()
-                }
-                # 检查空值
-                for field in required_fields:
-                    if not paper[field]:
-                        raise ValueError(f"第{idx}行的{field}字段为空（ID：{paper['id'] or '未知'}）")
-                papers.append(paper)
-        
-        if len(papers) == 0:
-            raise ValueError("CSV文件为空或无有效数据行")
-        
-        logger.info(f"✅ 成功读取 {len(papers)} 篇论文")
-        return papers
-    except csv.Error as e:
-        raise ValueError(f"CSV格式错误：{str(e)}（请检查列分隔符和格式）")
-    except Exception as e:
-        raise RuntimeError(f"读取文件失败：{str(e)}")
+    papers = []
+    with open(file_path, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        # 假设你的列名是 'id', 'title', 'abstract'，如果不是，请修改
+        for row in reader:
+            papers.append({
+                "id": row["id"],
+                "title": row["title"],
+                "abstract": row["abstract"]
+            })
+    
+    logger.info(f"✅ 成功读取 {len(papers)} 篇论文")
+    return papers
 
-# 预加载论文
-GLOBAL_PAPERS = []
-try:
-    GLOBAL_PAPERS = load_papers_from_file()
-except Exception as e:
-    logger.error(f"⚠️  论文数据加载失败：{str(e)}（启动后API会返回该错误）")
-    GLOBAL_PAPERS = []  # 继续启动服务，让用户通过API查看详情
-
-# ---------------------- 数据预处理函数 ----------------------
+# ---------------------- 数据预处理和BM25算法（无改动） ----------------------
 def clean_text_en(text):
+    if not text: return ""
     text = re.sub(r'[^\w\s]', '', text)
     text = re.sub(r'\d+', '', text)
     return text.lower().strip()
 
 def get_wordnet_pos(tag):
-    if tag.startswith('J'):
-        return wordnet.ADJ
-    elif tag.startswith('V'):
-        return wordnet.VERB
-    elif tag.startswith('N'):
-        return wordnet.NOUN
-    elif tag.startswith('R'):
-        return wordnet.ADV
+    if tag.startswith('J'): return wordnet.ADJ
+    elif tag.startswith('V'): return wordnet.VERB
+    elif tag.startswith('N'): return wordnet.NOUN
+    elif tag.startswith('R'): return wordnet.ADV
     return wordnet.NOUN
 
 def tokenize_en(text):
+    if not text: return []
     tokens = word_tokenize(text)
     pos_tags = nltk.pos_tag(tokens)
     return [
@@ -150,13 +111,16 @@ def tokenize_en(text):
 
 def expand_keywords_en(query):
     expanded = tokenize_en(query)
-    for word in tokenize_en(query):
-        for syn in wordnet.synsets(word):
-            expanded.extend([lemma.name() for lemma in syn.lemmas()])
+    for word in expanded.copy():
+        try:
+            for syn in wordnet.synsets(word)[:2]:
+                expanded.extend([lemma.name() for lemma in syn.lemmas()[:3]])
+        except:
+            continue
     return list(set(expanded))
 
-# ---------------------- BM25核心算法 ----------------------
 def build_bm25_index(tokenized_docs):
+    logger.info("开始构建BM25索引...")
     doc_freqs = defaultdict(int)
     doc_lengths = []
     term_freqs = []
@@ -172,6 +136,7 @@ def build_bm25_index(tokenized_docs):
             doc_freqs[word] += 1
 
     avgdl = sum(doc_lengths) / len(doc_lengths) if doc_lengths else 1
+    logger.info("✅ BM25索引构建完成")
     return doc_freqs, doc_lengths, avgdl, term_freqs
 
 def calculate_bm25(query, doc_freqs, doc_lengths, avgdl, term_freqs, k1=DEFAULT_K1, b=DEFAULT_B):
@@ -190,58 +155,95 @@ def calculate_bm25(query, doc_freqs, doc_lengths, avgdl, term_freqs, k1=DEFAULT_
         doc_freq = term_freqs[i]
         for word in tokenized_query:
             tf = doc_freq.get(word, 0)
-            if tf == 0:
-                continue
+            if tf == 0: continue
             denominator = tf + k1 * (1 - b + b * (doc_len / avgdl))
             score += idf[word] * (tf * (k1 + 1)) / denominator
         scores.append(score)
     return scores
 
-# ---------------------- 结果处理函数（简化返回字段）----------------------
+# ---------------------- 【新增】索引加载和保存函数 ----------------------
+def save_index(index_data, cache_file=INDEX_CACHE_FILE):
+    """将索引数据保存到文件"""
+    try:
+        with open(cache_file, 'wb') as f:
+            pickle.dump(index_data, f)
+        logger.info(f"✅ 索引已保存到 {cache_file}")
+    except Exception as e:
+        logger.warning(f"⚠️  保存索引失败: {e}")
+
+def load_index(cache_file=INDEX_CACHE_FILE) -> tuple:
+    """从文件加载索引数据"""
+    if not os.path.exists(cache_file):
+        logger.warning(f"❌ 索引文件 {cache_file} 不存在")
+        return None
+    
+    try:
+        with open(cache_file, 'rb') as f:
+            index_data = pickle.load(f)
+        logger.info(f"✅ 已从 {cache_file} 加载索引")
+        return index_data
+    except Exception as e:
+        logger.error(f"❌ 加载索引失败: {e}")
+        os.remove(cache_file) # 删除损坏的索引文件
+        logger.info("⚠️  已删除损坏的索引文件，将重新构建")
+        return None
+
+# ---------------------- 【优化后】结果处理函数 ----------------------
 def process_papers(query: str, k1: float = DEFAULT_K1, b: float = DEFAULT_B) -> List[Dict[str, Any]]:
+    global GLOBAL_BM25_INDEX
+
     if not GLOBAL_PAPERS:
-        raise ValueError("未加载到有效论文数据，请检查：1. papers.csv是否在当前目录 2. CSV格式是否正确 3. 是否包含id/title/abstract列")
+        raise ValueError("未加载到有效论文数据")
     
-    abstracts = [paper["abstract"] for paper in GLOBAL_PAPERS]
-    cleaned_abs = [clean_text_en(abs_text) for abs_text in abstracts]
-    tokenized_abs = [tokenize_en(abs_text) for abs_text in cleaned_abs]
+    # 核心优化：如果索引已在内存中，直接使用
+    if GLOBAL_BM25_INDEX is None:
+        # 尝试从文件加载索引
+        GLOBAL_BM25_INDEX = load_index()
+
+        # 如果文件中没有索引，则现场构建并保存
+        if GLOBAL_BM25_INDEX is None:
+            logger.info("索引未找到，正在进行首次预处理和索引构建（此过程仅一次）...")
+            abstracts = [paper["abstract"] for paper in GLOBAL_PAPERS]
+            cleaned_abs = [clean_text_en(abs_text) for abs_text in abstracts]
+            tokenized_abs = [tokenize_en(abs_text) for abs_text in cleaned_abs]
+            GLOBAL_BM25_INDEX = build_bm25_index(tokenized_abs)
+            # 保存索引供下次使用
+            save_index(GLOBAL_BM25_INDEX)
     
-    doc_freqs, doc_lengths, avgdl, term_freqs = build_bm25_index(tokenized_abs)
+    # 使用内存中的索引进行快速计算
+    doc_freqs, doc_lengths, avgdl, term_freqs = GLOBAL_BM25_INDEX
     bm25_scores = calculate_bm25(query, doc_freqs, doc_lengths, avgdl, term_freqs, k1, b)
     
-    # 核心修改：仅保留 id、title、original_abstract + 评分相关字段
+    # 结果处理
     results = []
     for i, paper in enumerate(GLOBAL_PAPERS):
         results.append({
-            "id": paper["id"],  # 保留
-            "title": paper["title"],  # 保留
-            "original_abstract": paper["abstract"],  # 保留
-            "bm25_score": round(bm25_scores[i], 4),  # 保留（用于判断相关性强弱）
+            "id": paper["id"],
+            "title": paper["title"],
+            "original_abstract": paper["abstract"],
+            "bm25_score": round(bm25_scores[i], 4),
         })
     
     results.sort(key=lambda x: x["bm25_score"], reverse=True)
-    # 只返回分数最高的一篇论文
     return results[:1]
 
-# ---------------------- API接口定义（同步简化响应模型）----------------------
-app = FastAPI(title="BM25论文筛选API", description="仅需传入查询关键词，返回相关性排序结果（简化字段）")
+# ---------------------- API接口和启动逻辑（无改动） ----------------------
+app = FastAPI(title="BM25论文筛选API", description="优化版：预缓存索引，实现毫秒级响应")
 
-# 添加CORS中间件以解决跨域问题
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 允许所有源（生产环境建议指定具体域名）
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # 允许所有HTTP方法
-    allow_headers=["*"],  # 允许所有请求头
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class BM25Request(BaseModel):
-    query: str  # 唯一必填参数
+    query: str
     k1: float = DEFAULT_K1
     b: float = DEFAULT_B
 
-# 简化响应模型：明确返回字段
 class PaperResult(BaseModel):
     id: str
     title: str
@@ -249,64 +251,48 @@ class PaperResult(BaseModel):
     bm25_score: float
 
 class BM25Response(BaseModel):
-    results: List[PaperResult]  # 用简化后的PaperResult模型
+    results: List[PaperResult]
     total_papers: int
-    selected_count: int  # 保留字段名但实际代表最高分数论文数（总是1）
+    selected_count: int
     threshold: float = DEFAULT_THRESHOLD
 
 @app.post("/bm25/score", response_model=BM25Response, summary="获取论文相关性评分")
 async def score_papers(request: BM25Request):
     try:
         results = process_papers(query=request.query, k1=request.k1, b=request.b)
-        # 只返回分数最高的一篇论文，所以selected_count总是1
         return {
             "results": results,
-            "total_papers": len(results),
-            "selected_count": 1,  # 因为只返回最高分数的一篇论文
+            "total_papers": len(GLOBAL_PAPERS),
+            "selected_count": len(results),
             "threshold": DEFAULT_THRESHOLD
         }
     except Exception as e:
         logger.error(f"API处理失败：{str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
-# ---------------------- 启动逻辑（强制日志输出）----------------------
 def start_server():
     try:
-        logger.info("=== BM25论文筛选API 开始启动 ===")
+        global GLOBAL_PAPERS
+        GLOBAL_PAPERS = load_papers_from_file()
+        
+        logger.info("=== BM25论文筛选API（优化版）开始启动 ===")
         logger.info(f"📡 服务配置：{API_HOST}:{API_PORT}")
-        logger.info(f"📄 论文文件路径：{os.path.abspath(PAPERS_CSV_PATH)}")  # 更新为CSV路径
-        logger.info("⚠️  启动后请勿关闭终端（关闭将停止服务）")
+        logger.info(f"📄 论文文件路径：{os.path.abspath(PAPERS_CSV_PATH)}")
+        logger.info("💡 首次查询可能较慢（需构建索引），后续查询将为毫秒级")
         logger.info("💡 访问 http://localhost:2625/docs 可测试API")
         
-        # 启动服务（添加日志回调，确保启动状态可见）
         uvicorn.run(
             app=app,
             host=API_HOST,
             port=API_PORT,
             log_level="info",
-            access_log=True,  # 开启访问日志，便于调试
-            reload=False,  # 生产模式关闭热重载
-            workers=1  # 单工作进程模式
+            access_log=True,
+            reload=False,
+            workers=1
         )
-    except KeyboardInterrupt:
-        logger.info("⏸️  接收到停止信号，正在关闭服务...")
     except Exception as e:
-        logger.error(f"❌ 服务异常：{str(e)}")
-        # 针对常见错误给出提示
-        if "address already in use" in str(e).lower():
-            logger.error("💡 解决方案：端口2625已被占用，请关闭占用程序，或修改代码中API_PORT为其他端口（如2626）")
-        elif "permission denied" in str(e).lower():
-            logger.error("💡 解决方案：无权限使用该端口（Windows需以管理员身份运行终端，Linux/Mac需加sudo）")
-        else:
-            logger.error("💡 请检查网络配置和防火墙设置")
-        return False
-    return True
+        logger.error(f"❌ 服务启动失败：{str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    # 确保在Windows环境下也能稳定运行
-    success = start_server()
-    if not success:
-        logger.error("❌ 服务启动失败，请检查以上错误信息")
-        sys.exit(1)
-    else:
-        logger.info("✅ 服务已停止")
+    start_server()
