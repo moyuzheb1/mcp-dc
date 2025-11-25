@@ -121,16 +121,6 @@
               </div>
             </div>
           </div>
-          
-          <!-- 原有的欢迎文本 (如果需要保留) -->
-          <div v-else-if="customText" class="mb-12">
-            <h1 class="text-2xl md:text-3xl font-bold py-4 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent whitespace-pre-line">{{ customText }}</h1>
-          </div>
-          <div v-else class="mb-12 max-w-2xl mx-auto">
-            <h1 class="text-2xl md:text-3xl font-bold py-4 text-center">{{ t('newThread.greeting') }}</h1>
-            <h3 class="text-lg px-8 pb-4 text-center text-gray-600 dark:text-gray-300">{{ t('newThread.prompt') }}</h3>
-          </div>
-          <p v-if="customTextError" class="text-sm text-red-500 px-8 mt-3 text-center max-w-md mx-auto bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-800/30">{{ customTextError }}</p>
         </div>
       </div>
       
@@ -629,6 +619,31 @@ const handleActionButtonClick = async () => {
   }
 };
 
+// 保存Sentence-BERT结果到文件的函数（与BM25的保存逻辑保持一致）
+const saveSentenceBertResults = async (papers: any[]) => {
+  try {
+    // 格式化结果
+    let paperContent = '';
+    papers.forEach((paper, index) => {
+      const title = paper.title || '无标题';
+      const abstract = paper.original_abstract || '无摘要';
+      const id = paper.id || `unknown-id-${index}`;
+      paperContent += `Sentence-BERT结果 ${index + 1}:\n`;
+      paperContent += `论文ID: ${id}\n`;
+      paperContent += `标题: ${title}\n`;
+      paperContent += `摘要: ${abstract}\n\n`;
+    });
+    
+    // 直接写入文件，与BM25的保存逻辑保持一致
+    await window.api.writeLocalFile('paper2.txt', paperContent);
+    console.log(`Sentence-BERT查询结果已保存到paper2.txt，共${papers.length}条记录`);
+  } catch (error) {
+    console.error('保存Sentence-BERT结果失败:', error);
+    throw error;
+  }
+};
+
+
 const handleRefreshButtonClick = async () => {
   console.log('刷新按钮被点击');
   try {
@@ -679,16 +694,31 @@ const handleRefreshButtonClick = async () => {
             
             // 只有当参数不为空时才调用接口
             if (queryParam) {
-              const response = await callBM25Api(queryParam);
-              if (response && response.length > 0) {
+              // 1. 调用BM25 API
+              const bm25Response = await callBM25Api(queryParam);
+              if (bm25Response && bm25Response.length > 0) {
                 // 取第一个结果，标题和摘要分别存储为两行
-                const paper = response[0];
+                const paper = bm25Response[0];
                 const title = paper.title || '无标题';
                 const abstract = paper.original_abstract || '无摘要';
                 const id = paper.id || '未知ID';
                 paperContent[paperContentIndex] = [id, title, abstract]; // id一行，标题一行，摘要一行
                 hasValidCalls = true;
-                console.log(`已成功获取第${lineNum}行参数的论文，存储为id、标题和摘要三行`);
+                console.log(`已成功获取第${lineNum}行参数的BM25论文结果`);
+              }
+              
+              // 2. 同时调用Sentence-BERT API接口
+              try {
+                // 调用Sentence-BERT API
+                const sentenceBertResponse = await callSentenceBertApi(queryParam);
+                
+                // 保存Sentence-BERT结果到paper2.txt
+                if (sentenceBertResponse && sentenceBertResponse.length > 0) {
+                  await saveSentenceBertResults(sentenceBertResponse);
+                }
+              } catch (sentenceError) {
+                console.error('调用Sentence-BERT API失败:', sentenceError);
+                // 不中断流程，继续执行BM25的结果处理
               }
             } else {
               console.warn(`第${paramLineNum}行内容为空，跳过API调用`);
@@ -801,6 +831,58 @@ const callBM25Api = async (query: string): Promise<any[]> => {
       errorMessage = String(err);
     }
     // 不在这里显示alert，避免多次调用时弹出多个alert
+    console.warn(`警告: ${errorMessage}`);
+    return [];
+  }
+};
+
+// Sentence-BERT接口调用函数
+const callSentenceBertApi = async (query: string): Promise<any[]> => {
+  try {
+    console.log('准备发送Sentence-BERT请求，查询参数:', query);
+    
+    // 确保与BM25使用相同的API URL结构
+    const apiUrl = 'http://localhost:2378/sentence-bert/match';
+    // 保持与BM25相同的请求参数格式，即使Sentence-BERT可能不使用k1和b参数
+    const requestBody = {
+      query: query,
+    };
+    
+    const startTime = performance.now();
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+    const endTime = performance.now();
+    
+    const responseTime = Math.round(endTime - startTime);
+    console.log(`Sentence-BERT请求完成，状态码: ${response.status}，响应时间: ${responseTime}ms`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP错误！状态码：${response.status}`);
+    }
+    
+    const responseData = await response.json();
+    console.log('Sentence-BERT接口返回结果:', responseData);
+    
+    // 假设返回格式与BM25类似，提取results字段
+    const papers = ((responseData as { results?: any[] }).results || []);
+    console.log(`本次Sentence-BERT调用返回的论文数量:`, papers.length);
+    
+    return papers;
+  } catch (err) {
+    // 改进的错误处理
+    console.error('调用Sentence-BERT接口失败:', err);
+    let errorMessage = '连接Sentence-BERT服务失败';
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    } else {
+      errorMessage = String(err);
+    }
     console.warn(`警告: ${errorMessage}`);
     return [];
   }

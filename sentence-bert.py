@@ -7,6 +7,7 @@ import csv
 import numpy as np
 from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware  # 导入CORS中间件
 from pydantic import BaseModel
 import uvicorn
 from sentence_transformers import SentenceTransformer, util
@@ -41,14 +42,14 @@ if sys.version_info < (3, 7):
 # ---------------------- 核心配置 ----------------------
 DEFAULT_MODEL = "all-MiniLM-L6-v2"  # 轻量级Sentence-BERT模型
 DEFAULT_THRESHOLD = 0.5  # 相似度阈值
-PAPERS_CSV_PATH = "papers.csv"  # 改为CSV路径
+PAPERS_CSV_PATH = "papers.csv"  # 论文CSV文件路径
 API_HOST = "0.0.0.0"
 API_PORT = 2378  # 与BM25区分端口
 
 # ---------------------- 模型初始化 ----------------------
 logger.info(f"开始加载Sentence-BERT模型：{DEFAULT_MODEL}...")
 try:
-    model = SentenceTransformer("./local_models/all-MiniLM-L6-v2")  # 替换为你的实际本地路径
+    model = SentenceTransformer("./local_models/all-MiniLM-L6-v2")  # 替换为实际本地模型路径
     logger.info("✅ Sentence-BERT模型加载成功")
 except Exception as e:
     logger.error(f"❌ 模型加载失败：{str(e)}（请检查网络连接或模型名称）")
@@ -126,7 +127,7 @@ def calculate_similarity(query: str) -> List[float]:
 # ---------------------- 结果处理函数 ----------------------
 def process_papers(query: str, threshold: float = DEFAULT_THRESHOLD) -> List[Dict[str, Any]]:
     if not GLOBAL_PAPERS or PAPER_EMBEDDINGS is None:
-        raise ValueError("未加载到有效论文数据，请检查：1. papers.json是否在当前目录 2. JSON格式是否正确 3. 是否包含id/title/abstract字段")
+        raise ValueError("未加载到有效论文数据，请检查：1. papers.csv是否在当前目录 2. CSV格式是否正确 3. 是否包含id/title/abstract字段")
     
     # 计算相似度
     similarities = calculate_similarity(query)
@@ -149,6 +150,15 @@ def process_papers(query: str, threshold: float = DEFAULT_THRESHOLD) -> List[Dic
 
 # ---------------------- API接口定义 ----------------------
 app = FastAPI(title="Sentence-BERT论文匹配API", description="基于句子嵌入的论文相关性匹配接口")
+
+# 配置CORS跨域，解决OPTIONS请求405错误
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 开发环境允许所有源（生产环境建议指定具体域名）
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有HTTP方法（包括OPTIONS预检请求）
+    allow_headers=["*"],  # 允许所有请求头
+)
 
 class SentenceBERTRequest(BaseModel):
     query: str  # 查询关键词/句子
@@ -183,6 +193,12 @@ async def match_papers(request: SentenceBERTRequest):
 
 # ---------------------- 启动逻辑 ----------------------
 if __name__ == "__main__":
+    # Windows系统切换事件循环（解决连接重置问题）
+    if platform.system() == "Windows":
+        import asyncio
+        from asyncio import WindowsSelectorEventLoopPolicy
+        asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+    
     logger.info("=== Sentence-BERT论文匹配API 开始启动 ===")
     logger.info(f"📡 服务配置：{API_HOST}:{API_PORT}")
     logger.info(f"🤖 使用模型：{DEFAULT_MODEL}")
@@ -195,7 +211,7 @@ if __name__ == "__main__":
             host=API_HOST,
             port=API_PORT,
             log_level="info",
-            access_log=False
+            access_log=True
         )
     except Exception as e:
         logger.error(f"❌ 服务启动失败：{str(e)}")
