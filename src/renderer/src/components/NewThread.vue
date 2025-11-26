@@ -777,7 +777,6 @@ const handleRefreshButtonClick = async () => {
                   
                   // 格式化结果为三行：ID、标题、摘要
                   paperContent2[paperContentIndex] = [id, title, abstract]; // id一行，标题一行，摘要一行
-                  hasValidCalls2 = true;
                 }
               } catch (sentenceError) {
                 console.error('调用Sentence-BERT API失败:', sentenceError);
@@ -795,7 +794,6 @@ const handleRefreshButtonClick = async () => {
           paperContent[paperContentIndex] = ['1', '1', '1'];
           paperContent2[paperContentIndex] = ['1', '1', '1'];
           hasValidCalls = true;
-          hasValidCalls2 = true;
         }
         // 其他情况保持默认的['1']
       }
