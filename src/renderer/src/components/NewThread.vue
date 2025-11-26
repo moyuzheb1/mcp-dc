@@ -79,37 +79,78 @@
                 </div>
                 <!-- 基于sample.txt第7-11行的控制标志动态显示论文信息文本框 -->
                 <div v-if="showPaperBox.length > index && showPaperBox[index] === 1" class="mt-5">
-                  <div v-if="paperData.length > index && paperData[index] && paperData[index].id" :class="[
-                    'p-5 rounded-lg border text-left shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1',
-                    index === 0 ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' :
-                    index === 1 ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' :
-                    index === 2 ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800' :
-                    index === 3 ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800' :
-                    'bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-800'
-                  ]">
-                    <div class="flex items-center mb-2">
-                      <a 
-                        :href="`https://arxiv.org/abs/${paperData[index].id}`" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        class="font-semibold text-ellipsis overflow-hidden block hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-1"
-                        title="点击查看论文"
-                      >
-                        {{ paperData[index].title }}
-                      </a>
-                      <svg class="w-4 h-4 ml-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                      </svg>
+                  <!-- paper.txt 论文 -->
+                  <div class="mb-5">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">相关论文</h3>
+                    <div v-if="paperData.length > index && paperData[index] && paperData[index].id" :class="[
+                      'p-5 rounded-lg border text-left shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1',
+                      index === 0 ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' :
+                      index === 1 ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' :
+                      index === 2 ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800' :
+                      index === 3 ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800' :
+                      'bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-800'
+                    ]">
+                      <div class="flex items-center mb-2">
+                        <a 
+                          :href="`https://arxiv.org/abs/${paperData[index].id}`" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          class="font-semibold text-ellipsis overflow-hidden block hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-1"
+                          title="点击查看论文"
+                        >
+                          {{ paperData[index].title }}
+                        </a>
+                        <svg class="w-4 h-4 ml-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                      </div>
+                      <div class="text-sm line-clamp-3 bg-white/70 dark:bg-gray-800/70 p-3 rounded-md border border-gray-100 dark:border-gray-700">
+                        {{ paperData[index].abstract }}
+                      </div>
                     </div>
-                    <div class="text-sm line-clamp-3 bg-white/70 dark:bg-gray-800/70 p-3 rounded-md border border-gray-100 dark:border-gray-700">
-                      {{ paperData[index].abstract }}
+                    <div v-else class="p-5 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700/50 text-center text-sm text-gray-500 dark:text-gray-400">
+                      <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      暂无论文数据
                     </div>
                   </div>
-                  <div v-else class="p-5 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700/50 text-center text-sm text-gray-500 dark:text-gray-400">
-                    <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    暂无论文数据
+                  
+                  <!-- paper2.txt 论文 -->
+                  <div>
+                    
+                    <div v-if="paper2Data.length > index && paper2Data[index] && paper2Data[index].id" :class="[
+                      'p-5 rounded-lg border text-left shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1',
+                      index === 0 ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800' :
+                      index === 1 ? 'bg-pink-50 dark:bg-pink-900/30 border-pink-200 dark:border-pink-800' :
+                      index === 2 ? 'bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800' :
+                      index === 3 ? 'bg-cyan-50 dark:bg-cyan-900/30 border-cyan-200 dark:border-cyan-800' :
+                      'bg-lime-50 dark:bg-lime-900/30 border-lime-200 dark:border-lime-800'
+                    ]">
+                      <div class="flex items-center mb-2">
+                        <a 
+                          :href="`https://arxiv.org/abs/${paper2Data[index].id}`" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          class="font-semibold text-ellipsis overflow-hidden block hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex-1"
+                          title="点击查看论文"
+                        >
+                          {{ paper2Data[index].title }}
+                        </a>
+                        <svg class="w-4 h-4 ml-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                      </div>
+                      <div class="text-sm line-clamp-3 bg-white/70 dark:bg-gray-800/70 p-3 rounded-md border border-gray-100 dark:border-gray-700">
+                        {{ paper2Data[index].abstract }}
+                      </div>
+                    </div>
+                    <div v-else class="p-5 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700/50 text-center text-sm text-gray-500 dark:text-gray-400">
+                      <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      暂无论文数据
+                    </div>
                   </div>
                 </div>
               </div>
@@ -428,6 +469,8 @@ const summary = ref<string>('')
 const showPaperBox = ref<number[]>([0, 0, 0, 0, 0])
 // 用于存储paper.txt的论文数据
 const paperData = ref<Array<{id: string, title: string, abstract: string}>>([])
+// 用于存储paper2.txt的论文数据
+const paper2Data = ref<Array<{id: string, title: string, abstract: string}>>([])
 
 const handleModelUpdate = (model: MODEL_META, providerId: string) => {
   activeModel.value = {
@@ -586,6 +629,35 @@ onMounted(async () => {
   } catch (error) {
     console.error('读取paper.txt失败:', error);
   }
+  
+  // 读取paper2.txt文件，提取论文数据
+  try {
+    const paper2FileContent = await window.api.readLocalFile('paper2.txt');
+    if (paper2FileContent) {
+      const lines = paper2FileContent.trim().split('\n').filter(line => line.trim() !== '');
+      // 使用与paper.txt相同的格式解析paper2.txt
+      const newPaper2Data: Array<{id: string, title: string, abstract: string}> = [];
+      // 处理5组数据（最多）
+      for (let i = 0; i < 5; i++) {
+        // 计算当前组的id行索引（从0开始）
+        const idIndex = i * 3;
+        const titleIndex = idIndex + 1;
+        const abstractIndex = idIndex + 2;
+        
+        // 检查索引是否有效
+        if (idIndex < lines.length && titleIndex < lines.length && abstractIndex < lines.length) {
+          newPaper2Data.push({
+            id: lines[idIndex].trim(),
+            title: lines[titleIndex].trim(),
+            abstract: lines[abstractIndex].trim()
+          });
+        }
+      }
+      paper2Data.value = newPaper2Data;
+    }
+  } catch (error) {
+    console.error('读取paper2.txt失败:', error);
+  }
 })
 
 // 刷新sample.txt和paper.txt的内容
@@ -653,7 +725,6 @@ const handleRefreshButtonClick = async () => {
 
     let paperContent2: string[][] = []; // 初始化为空数组
     
-    let hasValidCalls2 = false;
     
     // 定义检查和调用接口的通用函数
     const checkLineAndCallApi = async (lineIndex: number, paramLineIndex: number, lineNum: number, paramLineNum: number, paperContentIndex: number) => {
