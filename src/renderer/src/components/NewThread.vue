@@ -67,9 +67,28 @@
       <div class="flex-1 flex flex-col items-center justify-center px-4 py-6">
         <div class="w-full max-w-5xl">
           <!-- 显示sample.txt的内容 -->
-          <div v-if="sampleTitle" class="mb-12">
+          <div v-if="sampleTitle" class="mb-12 relative">
             <div class="mb-6">
               <h1 class="text-2xl md:text-3xl font-bold py-4 text-center text-gray-800 dark:text-gray-100">{{ sampleTitle }}</h1>
+            </div>
+            <!-- 难度反馈按钮 -->
+            <div class="absolute top-0 right-0 space-x-2">
+              <button 
+                @click="handleDifficultyButtonClick('难')" 
+                :class="['px-3 py-1 rounded-md text-sm font-medium transition-all duration-200', 
+                        isDifficultyClicked === '难' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800' : 
+                        'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700']"
+              >
+                难
+              </button>
+              <button 
+                @click="handleDifficultyButtonClick('简单')" 
+                :class="['px-3 py-1 rounded-md text-sm font-medium transition-all duration-200', 
+                        isDifficultyClicked === '简单' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800' : 
+                        'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700']"
+              >
+                简单
+              </button>
             </div>
             <div v-if="sampleColumns.length === 5" class="grid grid-cols-1 gap-6 mt-6 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
               <div v-for="(column, index) in sampleColumns" :key="index" class="py-5 px-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/50 text-center shadow-sm hover:shadow-md transition-all duration-300">
@@ -471,6 +490,29 @@ const showPaperBox = ref<number[]>([0, 0, 0, 0, 0])
 const paperData = ref<Array<{id: string, title: string, abstract: string}>>([])
 // 用于存储paper2.txt的论文数据
 const paper2Data = ref<Array<{id: string, title: string, abstract: string}>>([])
+// 用于记录难度按钮点击状态
+const isDifficultyClicked = ref<string | null>(null)
+
+// 处理难度按钮点击事件
+const handleDifficultyButtonClick = (difficulty: string) => {
+  isDifficultyClicked.value = difficulty;
+  
+  // 显示反馈提示
+  const notification = document.createElement('div');
+  notification.className = `fixed top-4 right-4 px-4 py-2 rounded-md text-white font-medium transition-opacity duration-300 ${difficulty === '难' ? 'bg-red-500' : 'bg-green-500'}`;
+  notification.textContent = `已标记为${difficulty}`;
+  document.body.appendChild(notification);
+  
+  // 2秒后自动消失
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => {
+      document.body.removeChild(notification);
+    }, 300);
+  }, 2000);
+  
+  console.log(`用户标记当前内容为: ${difficulty}`);
+}
 
 const handleModelUpdate = (model: MODEL_META, providerId: string) => {
   activeModel.value = {
