@@ -619,29 +619,7 @@ const handleActionButtonClick = async () => {
   }
 };
 
-// 保存Sentence-BERT结果到文件的函数（与BM25的保存逻辑保持一致）
-const saveSentenceBertResults = async (papers: any[]) => {
-  try {
-    // 格式化结果
-    let paperContent = '';
-    papers.forEach((paper, index) => {
-      const title = paper.title || '无标题';
-      const abstract = paper.original_abstract || '无摘要';
-      const id = paper.id || `unknown-id-${index}`;
-      paperContent += `Sentence-BERT结果 ${index + 1}:\n`;
-      paperContent += `论文ID: ${id}\n`;
-      paperContent += `标题: ${title}\n`;
-      paperContent += `摘要: ${abstract}\n\n`;
-    });
-    
-    // 直接写入文件，与BM25的保存逻辑保持一致
-    await window.api.writeLocalFile('paper2.txt', paperContent);
-    console.log(`Sentence-BERT查询结果已保存到paper2.txt，共${papers.length}条记录`);
-  } catch (error) {
-    console.error('保存Sentence-BERT结果失败:', error);
-    throw error;
-  }
-};
+
 
 
 const handleRefreshButtonClick = async () => {
@@ -672,12 +650,18 @@ const handleRefreshButtonClick = async () => {
     let paperContent: string[][] = []; // 初始化为空数组
     
     let hasValidCalls = false;
+
+    let paperContent2: string[][] = []; // 初始化为空数组
+    
+    let hasValidCalls2 = false;
     
     // 定义检查和调用接口的通用函数
     const checkLineAndCallApi = async (lineIndex: number, paramLineIndex: number, lineNum: number, paramLineNum: number, paperContentIndex: number) => {
       // 确保paperContent有足够的子数组
       while (paperContent.length <= paperContentIndex) {
         paperContent.push([]);
+      }while (paperContent2.length <= paperContentIndex) {
+        paperContent2.push([]);
       }
       
       // 检查指定行是否包含'1'或'0'
@@ -712,9 +696,17 @@ const handleRefreshButtonClick = async () => {
                 // 调用Sentence-BERT API
                 const sentenceBertResponse = await callSentenceBertApi(queryParam);
                 
-                // 保存Sentence-BERT结果到paper2.txt
+                // 保存Sentence-BERT结果到paper2.txt，与BM25处理方式保持一致
                 if (sentenceBertResponse && sentenceBertResponse.length > 0) {
-                  await saveSentenceBertResults(sentenceBertResponse);
+                  // 取第一个结果，标题和摘要分别存储
+                  const paper = sentenceBertResponse[0];
+                  const title = paper.title || '无标题';
+                  const abstract = paper.original_abstract || '无摘要';
+                  const id = paper.id || '未知ID';
+                  
+                  // 格式化结果为三行：ID、标题、摘要
+                  paperContent2[paperContentIndex] = [id, title, abstract]; // id一行，标题一行，摘要一行
+                  hasValidCalls2 = true;
                 }
               } catch (sentenceError) {
                 console.error('调用Sentence-BERT API失败:', sentenceError);
@@ -730,7 +722,9 @@ const handleRefreshButtonClick = async () => {
           // 如果包含'0'，写入三行'1'
           console.log(`第${lineNum}行包含0，设置为三行'1'`);
           paperContent[paperContentIndex] = ['1', '1', '1'];
+          paperContent2[paperContentIndex] = ['1', '1', '1'];
           hasValidCalls = true;
+          hasValidCalls2 = true;
         }
         // 其他情况保持默认的['1']
       }
@@ -762,8 +756,12 @@ const handleRefreshButtonClick = async () => {
     
     // 展平二维数组为一维数组，用于写入文件
     const flattenedContent: string[] = []; 
+    const flattenedContent2: string[] = [];
     paperContent.forEach(subArray => {
       subArray.forEach(line => flattenedContent.push(line));
+    });
+    paperContent2.forEach(subArray => {
+      subArray.forEach(line => flattenedContent2.push(line));
     });
     
     console.log('准备写入paper.txt的内容:', flattenedContent);
@@ -776,6 +774,15 @@ const handleRefreshButtonClick = async () => {
     } catch (error) {
       console.error('写入paper.txt文件失败:', error);
       alert('写入paper.txt文件失败');
+    }
+    // 写入paper2.txt文件
+    try {
+      await window.api.writeLocalFile('paper2.txt', flattenedContent2.join('\n'));
+      console.log('成功写入paper2.txt文件');
+      alert('paper2.txt文件已成功更新');
+    } catch (error) {
+      console.error('写入paper2.txt文件失败:', error);
+      alert('写入paper2.txt文件失败');
     }
   } catch (error) {
     console.error('刷新按钮处理失败:', error);
