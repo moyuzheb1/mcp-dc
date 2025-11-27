@@ -1,25 +1,38 @@
 <template>
-  <div class="h-full w-full flex flex-col items-center justify-between relative">
+  <div
+    class="h-full w-full flex flex-col items-center justify-between relative"
+  >
     <!-- 右上角问题生成按钮 -->
-    <Button 
+    <Button
       class="absolute top-4 right-4 h-10 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-full shadow-lg z-50 flex items-center justify-center gap-2 w-auto min-w-[120px] text-center"
       @click="handleQuestionGenerateClick"
     >
       <Icon icon="lucide:help-circle" class="h-4 w-4" />
       <span>问题生成</span>
     </Button>
-    
+
     <div class="w-full grow flex flex-col items-center justify-center px-4">
       <div class="w-full max-w-2xl">
-        <h1 v-if="customText" class="text-xl md:text-2xl font-bold py-4 text-center whitespace-pre-line">{{ customText }}</h1>
+        <h1
+          v-if="customText"
+          class="text-xl md:text-2xl font-bold py-4 text-center whitespace-pre-line"
+        >
+          {{ customText }}
+        </h1>
         <!-- 如果自定义文本为空或出错，显示默认欢迎语 -->
-        <h1 v-else class="text-xl md:text-2xl font-bold py-4">{{ t('newThread.greeting') }}</h1>
-        <h3 v-if="!customText" class="text-lg px-8 pb-2">{{ t('newThread.prompt') }}</h3>
+        <h1 v-else class="text-xl md:text-2xl font-bold py-4">
+          {{ t("newThread.greeting") }}
+        </h1>
+        <h3 v-if="!customText" class="text-lg px-8 pb-2">
+          {{ t("newThread.prompt") }}
+        </h3>
         <!-- 显示错误信息（如果有） -->
-        <p v-if="customTextError" class="text-sm text-red-500 px-8 mt-2">{{ customTextError }}</p>
+        <p v-if="customTextError" class="text-sm text-red-500 px-8 mt-2">
+          {{ customTextError }}
+        </p>
       </div>
     </div>
-    
+
     <!-- 固定在底部的输入框区域 -->
     <div class="w-full px-4 py-4 pb-16">
       <ChatInput
@@ -45,9 +58,10 @@
                   :model-id="activeModel.providerId"
                   :is-dark="themeStore.isDark"
                 ></ModelIcon>
-                <span class="text-xs font-semibold truncate max-w-[140px] text-foreground">{{
-                  name
-                }}</span>
+                <span
+                  class="text-xs font-semibold truncate max-w-[140px] text-foreground"
+                  >{{ name }}</span
+                >
                 <Badge
                   v-for="tag in activeModel.tags"
                   :key="tag"
@@ -56,7 +70,10 @@
                 >
                   {{ t(`model.tags.${tag}`) }}</Badge
                 >
-                <Icon icon="lucide:chevron-right" class="w-4 h-4 text-muted-foreground" />
+                <Icon
+                  icon="lucide:chevron-right"
+                  class="w-4 h-4 text-muted-foreground"
+                />
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" class="w-80 p-0">
@@ -108,74 +125,77 @@
 </template>
 
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
-import ChatInput from './chat-input/ChatInput.vue'
-import { Popover, PopoverContent, PopoverTrigger } from '@shadcn/components/ui/popover'
-import ScrollablePopover from './ScrollablePopover.vue'
-import { Button } from '@shadcn/components/ui/button'
-import ModelIcon from './icons/ModelIcon.vue'
-import { Badge } from '@shadcn/components/ui/badge'
-import { Icon } from '@iconify/vue'
-import ModelSelect from './ModelSelect.vue'
-import { useChatStore } from '@/stores/chat'
-import { MODEL_META } from '@shared/presenter'
-import { useSettingsStore } from '@/stores/settings'
-import { computed, nextTick, ref, watch, onMounted } from 'vue'
-import { UserMessageContent } from '@shared/chat'
-import ChatConfig from './ChatConfig.vue'
-import { usePresenter } from '@/composables/usePresenter'
-import { useThemeStore } from '@/stores/theme'
-import { ModelType } from '@shared/model'
-import { useRouter } from 'vue-router'
+import { useI18n } from "vue-i18n";
+import ChatInput from "./chat-input/ChatInput.vue";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@shadcn/components/ui/popover";
+import ScrollablePopover from "./ScrollablePopover.vue";
+import { Button } from "@shadcn/components/ui/button";
+import ModelIcon from "./icons/ModelIcon.vue";
+import { Badge } from "@shadcn/components/ui/badge";
+import { Icon } from "@iconify/vue";
+import ModelSelect from "./ModelSelect.vue";
+import { useChatStore } from "@/stores/chat";
+import { MODEL_META } from "@shared/presenter";
+import { useSettingsStore } from "@/stores/settings";
+import { computed, nextTick, ref, watch, onMounted } from "vue";
+import { UserMessageContent } from "@shared/chat";
+import ChatConfig from "./ChatConfig.vue";
+import { usePresenter } from "@/composables/usePresenter";
+import { useThemeStore } from "@/stores/theme";
+import { ModelType } from "@shared/model";
 
-const configPresenter = usePresenter('configPresenter')
-const threadPresenter = usePresenter('threadPresenter')
-const themeStore = useThemeStore()
-const router = useRouter()
+const configPresenter = usePresenter("configPresenter");
+const themeStore = useThemeStore();
 
 // 定义偏好模型的类型
 interface PreferredModel {
-  modelId: string
-  providerId: string
+  modelId: string;
+  providerId: string;
 }
 
-const { t } = useI18n()
-const chatStore = useChatStore()
-const settingsStore = useSettingsStore()
+const { t } = useI18n();
+const chatStore = useChatStore();
+const settingsStore = useSettingsStore();
 // 添加新的响应式变量来存储自定义文本
-const customText = ref('');
-const customTextError = ref('');
+const customText = ref("");
+const customTextError = ref("");
 const activeModel = ref({
-  name: '',
-  id: '',
-  providerId: '',
+  name: "",
+  id: "",
+  providerId: "",
   tags: [],
-  type: ModelType.Chat
+  type: ModelType.Chat,
 } as {
-  name: string
-  id: string
-  providerId: string
-  tags: string[]
-  type: ModelType
-})
+  name: string;
+  id: string;
+  providerId: string;
+  tags: string[];
+  type: ModelType;
+});
 
-const temperature = ref(0.6)
-const contextLength = ref(16384)
-const contextLengthLimit = ref(16384)
-const maxTokens = ref(4096)
-const maxTokensLimit = ref(4096)
-const systemPrompt = ref('')
-const artifacts = ref(settingsStore.artifactsEffectEnabled ? 1 : 0)
-const thinkingBudget = ref<number | undefined>(undefined)
-const enableSearch = ref<boolean | undefined>(undefined)
-const forcedSearch = ref<boolean | undefined>(undefined)
-const searchStrategy = ref<'turbo' | 'max' | undefined>(undefined)
-const reasoningEffort = ref<'minimal' | 'low' | 'medium' | 'high' | undefined>(undefined)
-const verbosity = ref<'low' | 'medium' | 'high' | undefined>(undefined)
+const temperature = ref(0.6);
+const contextLength = ref(16384);
+const contextLengthLimit = ref(16384);
+const maxTokens = ref(4096);
+const maxTokensLimit = ref(4096);
+const systemPrompt = ref("");
+const artifacts = ref(settingsStore.artifactsEffectEnabled ? 1 : 0);
+const thinkingBudget = ref<number | undefined>(undefined);
+const enableSearch = ref<boolean | undefined>(undefined);
+const forcedSearch = ref<boolean | undefined>(undefined);
+const searchStrategy = ref<"turbo" | "max" | undefined>(undefined);
+const reasoningEffort = ref<"minimal" | "low" | "medium" | "high" | undefined>(
+  undefined,
+);
+const verbosity = ref<"low" | "medium" | "high" | undefined>(undefined);
 
 const name = computed(() => {
-  return activeModel.value?.name ? activeModel.value.name.split('/').pop() : ''
-})
+  return activeModel.value?.name ? activeModel.value.name.split("/").pop() : "";
+});
 
 watch(
   () => activeModel.value,
@@ -183,109 +203,119 @@ watch(
     // console.log('activeModel', activeModel.value)
     const config = await configPresenter.getModelDefaultConfig(
       activeModel.value.id,
-      activeModel.value.providerId
-    )
-    temperature.value = config.temperature ?? 0.7
-    contextLength.value = config.contextLength
-    maxTokens.value = config.maxTokens
-    contextLengthLimit.value = config.contextLength
-    maxTokensLimit.value = config.maxTokens
-    thinkingBudget.value = config.thinkingBudget
-    enableSearch.value = config.enableSearch
-    forcedSearch.value = config.forcedSearch
-    searchStrategy.value = config.searchStrategy
-    reasoningEffort.value = config.reasoningEffort
-    verbosity.value = config.verbosity
+      activeModel.value.providerId,
+    );
+    temperature.value = config.temperature ?? 0.7;
+    contextLength.value = config.contextLength;
+    maxTokens.value = config.maxTokens;
+    contextLengthLimit.value = config.contextLength;
+    maxTokensLimit.value = config.maxTokens;
+    thinkingBudget.value = config.thinkingBudget;
+    enableSearch.value = config.enableSearch;
+    forcedSearch.value = config.forcedSearch;
+    searchStrategy.value = config.searchStrategy;
+    reasoningEffort.value = config.reasoningEffort;
+    verbosity.value = config.verbosity;
     // console.log('temperature', temperature.value)
     // console.log('contextLength', contextLength.value)
     // console.log('maxTokens', maxTokens.value)
-  }
-)
+  },
+);
 // 初始化与校验逻辑：只在激活时初始化一次；仅监听 enabledModels 变化做有效性校验
-const initialized = ref(false)
+const initialized = ref(false);
 
 const findEnabledModel = (providerId: string, modelId: string) => {
   for (const provider of settingsStore.enabledModels) {
     if (provider.providerId === providerId) {
       for (const model of provider.models) {
         if (model.id === modelId) {
-          return { model, providerId: provider.providerId }
+          return { model, providerId: provider.providerId };
         }
       }
     }
   }
-  return undefined
-}
+  return undefined;
+};
 
 const pickFirstEnabledModel = () => {
   const found = settingsStore.enabledModels
     .flatMap((p) => p.models.map((m) => ({ ...m, providerId: p.providerId })))
-    .find((m) => m.type === ModelType.Chat || m.type === ModelType.ImageGeneration)
-  return found
-}
+    .find(
+      (m) => m.type === ModelType.Chat || m.type === ModelType.ImageGeneration,
+    );
+  return found;
+};
 
 const setActiveFromEnabled = (m: {
-  name: string
-  id: string
-  providerId: string
-  type?: ModelType
+  name: string;
+  id: string;
+  providerId: string;
+  type?: ModelType;
 }) => {
   activeModel.value = {
     name: m.name,
     id: m.id,
     providerId: m.providerId,
     tags: [],
-    type: m.type ?? ModelType.Chat
-  }
-}
+    type: m.type ?? ModelType.Chat,
+  };
+};
 
 const initActiveModel = async () => {
-  if (initialized.value) return
+  if (initialized.value) return;
   // 1) 尝试根据最近会话（区分 pinned/非 pinned）选择
   if (chatStore.threads.length > 0) {
-    const pinnedGroup = chatStore.threads.find((g) => g.dt === 'Pinned')
-    const pinnedFirst = pinnedGroup?.dtThreads?.[0]
-    const normalGroup = chatStore.threads.find((g) => g.dt !== 'Pinned' && g.dtThreads.length > 0)
-    const normalFirst = normalGroup?.dtThreads?.[0]
+    const pinnedGroup = chatStore.threads.find((g) => g.dt === "Pinned");
+    const pinnedFirst = pinnedGroup?.dtThreads?.[0];
+    const normalGroup = chatStore.threads.find(
+      (g) => g.dt !== "Pinned" && g.dtThreads.length > 0,
+    );
+    const normalFirst = normalGroup?.dtThreads?.[0];
     const candidate = [pinnedFirst, normalFirst]
       .filter(Boolean)
       .sort((a, b) => (b!.updatedAt || 0) - (a!.updatedAt || 0))[0] as
       | typeof pinnedFirst
-      | undefined
+      | undefined;
     if (candidate?.settings?.modelId && candidate?.settings?.providerId) {
-      const match = findEnabledModel(candidate.settings.providerId, candidate.settings.modelId)
+      const match = findEnabledModel(
+        candidate.settings.providerId,
+        candidate.settings.modelId,
+      );
       if (match) {
-        setActiveFromEnabled({ ...match.model, providerId: match.providerId })
-        initialized.value = true
-        return
+        setActiveFromEnabled({ ...match.model, providerId: match.providerId });
+        initialized.value = true;
+        return;
       }
     }
   }
 
   // 2) 尝试用户上次选择的偏好模型
   try {
-    const preferredModel = (await configPresenter.getSetting('preferredModel')) as
-      | PreferredModel
-      | undefined
+    const preferredModel = (await configPresenter.getSetting(
+      "preferredModel",
+    )) as PreferredModel | undefined;
     if (preferredModel?.modelId && preferredModel?.providerId) {
-      const match = findEnabledModel(preferredModel.providerId, preferredModel.modelId)
+      const match = findEnabledModel(
+        preferredModel.providerId,
+        preferredModel.modelId,
+      );
       if (match) {
-        setActiveFromEnabled({ ...match.model, providerId: match.providerId })
-        initialized.value = true
-        return
+        setActiveFromEnabled({ ...match.model, providerId: match.providerId });
+        initialized.value = true;
+        return;
       }
     }
   } catch (error) {
-    console.warn('Failed to get user preferred model:', error)
+    console.warn("Failed to get user preferred model:", error);
   }
 
   // 3) 选择第一个可用模型
-  const first = pickFirstEnabledModel()
+  const first = pickFirstEnabledModel();
   if (first) {
-    setActiveFromEnabled(first)
-    initialized.value = true
+    setActiveFromEnabled(first);
+    initialized.value = true;
   }
-}
+};
 
 // 仅监听 enabledModels：
 // - 若未初始化，进行一次初始化
@@ -294,29 +324,29 @@ watch(
   () => settingsStore.enabledModels,
   async () => {
     if (!initialized.value) {
-      await initActiveModel()
-      return
+      await initActiveModel();
+      return;
     }
 
     // 校验当前模型是否仍可用
-    const current = activeModel.value
+    const current = activeModel.value;
     if (!current?.id || !current?.providerId) {
-      const first = pickFirstEnabledModel()
-      if (first) setActiveFromEnabled(first)
-      return
+      const first = pickFirstEnabledModel();
+      if (first) setActiveFromEnabled(first);
+      return;
     }
-    const stillExists = !!findEnabledModel(current.providerId, current.id)
+    const stillExists = !!findEnabledModel(current.providerId, current.id);
     if (!stillExists) {
-      const first = pickFirstEnabledModel()
-      if (first) setActiveFromEnabled(first)
+      const first = pickFirstEnabledModel();
+      if (first) setActiveFromEnabled(first);
     }
   },
-  { immediate: false, deep: true }
-)
+  { immediate: false, deep: true },
+);
 
-const modelSelectOpen = ref(false)
-const settingsPopoverOpen = ref(false)
-const chatInputRef = ref<InstanceType<typeof ChatInput> | null>(null)
+const modelSelectOpen = ref(false);
+const settingsPopoverOpen = ref(false);
+const chatInputRef = ref<InstanceType<typeof ChatInput> | null>(null);
 
 const handleModelUpdate = (model: MODEL_META, providerId: string) => {
   activeModel.value = {
@@ -324,21 +354,21 @@ const handleModelUpdate = (model: MODEL_META, providerId: string) => {
     id: model.id,
     providerId: providerId,
     tags: [],
-    type: model.type ?? ModelType.Chat
-  }
+    type: model.type ?? ModelType.Chat,
+  };
   chatStore.updateChatConfig({
     modelId: model.id,
-    providerId: providerId
-  })
+    providerId: providerId,
+  });
 
   // 保存用户的模型偏好设置
-  configPresenter.setSetting('preferredModel', {
+  configPresenter.setSetting("preferredModel", {
     modelId: model.id,
-    providerId: providerId
-  })
+    providerId: providerId,
+  });
 
-  modelSelectOpen.value = false
-}
+  modelSelectOpen.value = false;
+};
 
 // 监听 deeplinkCache 变化
 watch(
@@ -346,103 +376,110 @@ watch(
   (newCache) => {
     if (newCache) {
       if (newCache.modelId) {
-        const matchedModel = settingsStore.findModelByIdOrName(newCache.modelId)
-        console.log('matchedModel', matchedModel)
+        const matchedModel = settingsStore.findModelByIdOrName(
+          newCache.modelId,
+        );
+        console.log("matchedModel", matchedModel);
         if (matchedModel) {
-          handleModelUpdate(matchedModel.model, matchedModel.providerId)
+          handleModelUpdate(matchedModel.model, matchedModel.providerId);
         }
       }
       if (newCache.msg || newCache.mentions) {
         const setInputContent = () => {
           if (chatInputRef.value) {
-            console.log('[NewThread] Setting input content, msg:', newCache.msg)
-            const chatInput = chatInputRef.value
-            chatInput.clearContent()
+            console.log(
+              "[NewThread] Setting input content, msg:",
+              newCache.msg,
+            );
+            const chatInput = chatInputRef.value;
+            chatInput.clearContent();
             if (newCache.mentions) {
               newCache.mentions.forEach((mention) => {
-                chatInput.appendMention(mention)
-              })
+                chatInput.appendMention(mention);
+              });
             }
             if (newCache.msg) {
-              console.log('[NewThread] Appending text:', newCache.msg)
-              chatInput.appendText(newCache.msg)
+              console.log("[NewThread] Appending text:", newCache.msg);
+              chatInput.appendText(newCache.msg);
             }
-            return true
+            return true;
           }
-          return false
-        }
+          return false;
+        };
 
         if (!setInputContent()) {
-          console.log('[NewThread] ChatInput ref not ready, retrying...')
+          console.log("[NewThread] ChatInput ref not ready, retrying...");
           nextTick(() => {
             if (!setInputContent()) {
               setTimeout(() => {
                 if (!setInputContent()) {
-                  console.warn('[NewThread] Failed to set input content after retries')
+                  console.warn(
+                    "[NewThread] Failed to set input content after retries",
+                  );
                 }
-              }, 100)
+              }, 100);
             }
-          })
+          });
         }
       }
       if (newCache.systemPrompt) {
-        systemPrompt.value = newCache.systemPrompt
+        systemPrompt.value = newCache.systemPrompt;
       }
       if (newCache.autoSend && newCache.msg) {
         handleSend({
-          text: newCache.msg || '',
+          text: newCache.msg || "",
           files: [],
           links: [],
           think: false,
-          search: false
-        })
+          search: false,
+        });
       }
       // 清理缓存
-      chatStore.clearDeeplinkCache()
+      chatStore.clearDeeplinkCache();
     }
   },
-  { immediate: true }
-)
+  { immediate: true },
+);
 
 onMounted(async () => {
   configPresenter.getDefaultSystemPrompt().then((prompt) => {
-    systemPrompt.value = prompt
-  })
+    systemPrompt.value = prompt;
+  });
   // 组件激活时初始化一次默认模型
-  await initActiveModel()
-  
+  await initActiveModel();
+
   // 尝试从根目录的custom-welcome.txt文件读取自定义欢迎文本
   try {
-    const fileContent = await window.api.readLocalFile('custom-welcome.txt');
+    const fileContent = await window.api.readLocalFile("custom-welcome.txt");
     if (fileContent) {
       customText.value = fileContent.trim();
     }
   } catch (error) {
-    console.error('读取自定义欢迎文本失败:', error);
-    customTextError.value = '无法读取自定义欢迎文本';
+    console.error("读取自定义欢迎文本失败:", error);
+    customTextError.value = "无法读取自定义欢迎文本";
   }
-})
+});
 
 // 处理问题生成按钮点击事件
 const handleQuestionGenerateClick = async () => {
-  console.log('问题生成按钮被点击');
+  console.log("问题生成按钮被点击");
   try {
     // 读取用户偏好（如果存在）
-    let userPref = '';
+    let userPref = "";
     try {
-      userPref = (await window.api.readLocalFile('user-preferences.txt')) || '';
-      console.log('读取到的用户偏好:', userPref);
+      userPref = (await window.api.readLocalFile("user-preferences.txt")) || "";
+      console.log("读取到的用户偏好:", userPref);
     } catch (err) {
-      console.warn('无法读取 user-preferences.txt，继续使用空偏好', err);
-      userPref = '';
+      console.warn("无法读取 user-preferences.txt，继续使用空偏好", err);
+      userPref = "";
     }
 
     // 构建问题生成查询
-    const questionQuery = userPref 
+    const questionQuery = userPref
       ? `基于用户偏好"${userPref}"，生成5个相关的深入问题，每个问题都要具体且有针对性`
       : "生成5个关于人工智能和技术发展的深入问题，每个问题都要具体且有针对性";
-    
-    console.log('构建的查询消息:', questionQuery);
+
+    console.log("构建的查询消息:", questionQuery);
 
     // 创建新会话并发送消息
     await handleSend({
@@ -450,13 +487,13 @@ const handleQuestionGenerateClick = async () => {
       files: [],
       links: [],
       think: false,
-      search: false
+      search: false,
     });
   } catch (error) {
-    console.error('问题生成失败:', error);
-    alert(`问题生成失败: ${(error as Error).message || '未知错误'}`);
+    console.error("问题生成失败:", error);
+    alert(`问题生成失败: ${(error as Error).message || "未知错误"}`);
   }
-}
+};
 
 const handleSend = async (content: UserMessageContent) => {
   const threadId = await chatStore.createThread(content.text, {
@@ -473,9 +510,9 @@ const handleSend = async (content: UserMessageContent) => {
     searchStrategy: searchStrategy.value,
     reasoningEffort: reasoningEffort.value,
     verbosity: verbosity.value,
-    enabledMcpTools: chatStore.chatConfig.enabledMcpTools
-  } as any)
-  console.log('threadId', threadId, activeModel.value)
-  chatStore.sendMessage(content)
-}
+    enabledMcpTools: chatStore.chatConfig.enabledMcpTools,
+  } as any);
+  console.log("threadId", threadId, activeModel.value);
+  chatStore.sendMessage(content);
+};
 </script>
