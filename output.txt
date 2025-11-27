@@ -1,0 +1,1 @@
+404 No endpoints found for qwen/qwen-2.5-72b-instruct:free.

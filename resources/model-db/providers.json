@@ -73644,26 +73644,7 @@
           }
         },
         {
-          "id": "qwen/qwen-2.5-72b-instruct:free",
-          "name": "Qwen2.5 72B Instruct (free)",
-          "display_name": "Qwen2.5 72B Instruct (free)",
-          "modalities": {
-            "input": [
-              "text"
-            ],
-            "output": [
-              "text"
-            ]
-          },
-          "limit": {
-            "context": 32768
-          },
-          "tool_call": false,
-          "reasoning": {
-            "supported": false
-          }
-        },
-        {
+
           "id": "qwen/qwen-2.5-7b-instruct",
           "name": "Qwen: Qwen2.5 7B Instruct",
           "display_name": "Qwen: Qwen2.5 7B Instruct",

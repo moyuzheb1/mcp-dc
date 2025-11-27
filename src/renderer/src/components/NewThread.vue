@@ -1350,6 +1350,17 @@ ${minimalNewsContent}`;
       
       debugLog('清理后的问题结构:', cleanedQuestionStructure);
       
+      // 将生成的问题结构保存到应用根目录的output.txt文件
+      try {
+        debugLog('开始将问题结构保存到output.txt');
+        await window.api.writeLocalFile('output.txt', cleanedQuestionStructure);
+        debugLog('问题结构已成功保存到output.txt');
+      } catch (error) {
+        debugLog('保存问题结构到output.txt时出错:', error);
+        console.error('保存文件失败:', error);
+        alert(`生成问题结构成功，但保存到文件时失败: ${(error as Error).message || '未知错误'}`);
+      }
+      
       // 显示清理后的问题结构
       alert(`生成的问题结构：\n\n${cleanedQuestionStructure}`);
       debugLog('处理完成，问题结构已显示给用户');
