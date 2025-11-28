@@ -75,10 +75,10 @@
             
             <div class="step-content">
               <div class="step-header">
-                <!-- 显示关键字 -->
-                <h3 class="step-title">{{ keywords[index] || '关键步骤' }}</h3>
-                <!-- 显示原有Column内容 -->
-                <span class="step-column-tag">{{ column }}</span>
+                <!-- 修改：左上角显示步骤内容 (原 column) -->
+                <h3 class="step-title">{{ column }}</h3>
+                <!-- 修改：右上角显示关键词 (原 keywords) -->
+                <span class="step-column-tag">{{ keywords[index] || '关键步骤' }}</span>
               </div>
 
               <!-- 论文列表 -->
