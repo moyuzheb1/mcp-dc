@@ -9,7 +9,7 @@
              <img src="/cb19e5f2778cc441e6ba9b7ad38150d2.png" alt="Logo" class="w-full h-full object-contain" />
           </div>
         </span>
-        <span class="logo-text">PaperLearn</span>
+        <span class="logo-text">DePaper</span>
       </div>
       
       <nav class="nav-menu">
