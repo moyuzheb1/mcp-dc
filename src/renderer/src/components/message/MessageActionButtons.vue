@@ -18,7 +18,7 @@
       key="new-chat"
       variant="outline"
       size="icon"
-      class="w-8 h-8 shrink-0 opacity-100 bg-card backdrop-blur-lg z-20"
+      class="w-7 h-7 shrink-0 opacity-100 bg-card backdrop-blur-lg z-20"
       @click="$emit('clean')"
     >
       <Icon icon="lucide:brush-cleaning" class="w-6 h-6 text-foreground" />

@@ -247,7 +247,7 @@
         <!-- 消息操作按钮 -->
         <template v-if="!capture.isCapturing.value">
             <MessageActionButtons
-                class="absolute bottom-4 right-4 z-30"
+                class=" bottom-6.5 right-45.5 z-30"
                 :show-clean-button="!showCancelButton && messages.length > 0"
                 :show-scroll-button="aboveThreshold"
                 @clean="cleanDialog.open"
