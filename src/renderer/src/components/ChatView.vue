@@ -8,15 +8,7 @@
     />
 
     <!-- 输入框区域 -->
-    <div class="flex-none px-0 pb-0">
-      <ChatInput
-        ref="chatInput"
-        variant="chat"
-        :disabled="!chatStore.getActiveThreadId() || isGenerating"
-        @send="handleSend"
-        @file-upload="handleFileUpload"
-      />
-    </div>
+
   </div>
 </template>
 
