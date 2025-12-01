@@ -114,7 +114,7 @@
                       {{ paper2Data[index].title }}
                     </a>
                     <div class="paper-abstract">
-                      <strong>S-BERT 摘要:</strong> {{ paper2Data[index].abstract }}
+                      <strong>AI 摘要:</strong> {{ paper2Data[index].abstract }}
                     </div>
                   </div>
                 </div>
@@ -314,10 +314,10 @@ watch(
       activeModel.value.providerId
     )
     temperature.value = config.temperature ?? 0.7
-    contextLength.value = config.contextLength
-    maxTokens.value = config.maxTokens
-    contextLengthLimit.value = config.contextLength
-    maxTokensLimit.value = config.maxTokens
+    contextLength.value = config.contextLength/2
+    maxTokens.value = config.maxTokens/2
+    contextLengthLimit.value = config.contextLength/2
+    maxTokensLimit.value = config.maxTokens/2
     thinkingBudget.value = config.thinkingBudget
     enableSearch.value = config.enableSearch
     forcedSearch.value = config.forcedSearch
@@ -561,7 +561,7 @@ onMounted(async () => {
   
   // Read sample.txt
   try {
-    const sampleFileContent = await window.api.readLocalFile('sample.txt');
+    const sampleFileContent = await window.api.readLocalFile('output.txt');
     if (sampleFileContent) {
       const lines = sampleFileContent.trim().split('\n').filter(line => line.trim() !== '');
       if (lines.length > 0) {
@@ -919,10 +919,11 @@ DeepSeekMath - V2 模型实现奥数金牌级数学能力的核心技术实现�
 }
 
 const handleSend = async (content: UserMessageContent) => {
+  const sampleFileContent = await window.api.readLocalFile('output.txt');
   const threadId = await chatStore.createThread(content.text, {
     providerId: activeModel.value.providerId,
     modelId: activeModel.value.id,
-    systemPrompt: systemPrompt.value,
+    systemPrompt: sampleFileContent,
     temperature: temperature.value,
     contextLength: contextLength.value,
     maxTokens: maxTokens.value,
