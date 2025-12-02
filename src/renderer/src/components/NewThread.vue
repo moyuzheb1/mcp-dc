@@ -114,7 +114,7 @@
                       {{ paper2Data[index].title }}
                     </a>
                     <div class="paper-abstract">
-                      <strong>S-BERT 摘要:</strong> {{ paper2Data[index].abstract }}
+                      <strong>AI 摘要:</strong> {{ paper2Data[index].abstract }}
                     </div>
                   </div>
                 </div>
@@ -314,10 +314,10 @@ watch(
       activeModel.value.providerId
     )
     temperature.value = config.temperature ?? 0.7
-    contextLength.value = config.contextLength
-    maxTokens.value = config.maxTokens
-    contextLengthLimit.value = config.contextLength
-    maxTokensLimit.value = config.maxTokens
+    contextLength.value = config.contextLength/2
+    maxTokens.value = config.maxTokens/2
+    contextLengthLimit.value = config.contextLength/2
+    maxTokensLimit.value = config.maxTokens/2
     thinkingBudget.value = config.thinkingBudget
     enableSearch.value = config.enableSearch
     forcedSearch.value = config.forcedSearch
@@ -561,7 +561,7 @@ onMounted(async () => {
   
   // Read sample.txt
   try {
-    const sampleFileContent = await window.api.readLocalFile('sample.txt');
+    const sampleFileContent = await window.api.readLocalFile('output.txt');
     if (sampleFileContent) {
       const lines = sampleFileContent.trim().split('\n').filter(line => line.trim() !== '');
       if (lines.length > 0) {
@@ -842,12 +842,43 @@ const handleProcessNewsAndGenerateQuestions = async () => {
 
     // 2. Generate Structure
     const systemPromptForQuestionGeneration = `你是一个专业的AI助手。请从新闻中提取信息并生成结构化问题。`;
-    const detailedInstructions = `AI新闻科技关键词精准问题生成：
-1. 生成1个大框架问题（第一行）
-2. 生成5个关键技术环节，每个一行
-3. 生成5个0/1论文推荐标记，每个一行
-4. 提取6个核心科技关键词，每个一行
-绝对禁止占位符文本。`;
+    const detailedInstructions = `请严格按照以下优先级和步骤处理提供的新闻内容，仅输出指定核心内容：
+核心任务步骤
+先从新闻全文提炼 5 个核心科技关键词（内部使用，不用输出），聚焦技术名称、创新应用等强相关维度；
+筛选优先级：优先挑选有具体实现过程、技术流程可拆解的关键词（若多个符合，选与新闻核心关联最紧密的 1 个）；
+针对选中的关键词，生成 1 个大框架问题，需覆盖其核心技术过程、关键要点或实践逻辑；
+基于该关键词的通用技术实现逻辑 ，推导 5 个关键过程 / 要点，生成对应的子过程，聚焦细节拆解。
+针对每个子过程，根据其技术难度自行判断是否需要给予用户论文推荐，需要则为1，不需要则为0；
+然后分别针对每个子过程生成对应的ai领域学术专业词汇，只有专业词汇要求英文，且有抽象性和学术性，用于论文的检索（如machine learning、computer vision）；
+最后根据子过程生成一段简短的针对大框架问题的解决过程的总结，尽量精简而不失要点。
+输出格式要求：
+[具体问题]（直接输出问题内容，不要带括号）
+[子过程 1]
+[子过程 2]
+[子过程 3]
+[子过程 4]（直接输出，不要带括号等占位符）
+[子过程5]
+1/0
+1/0
+1/0(1表示要推荐，0表示不要推荐）
+1/0
+1/0
+[子过程1的专业词汇]
+[子过程2的专业词汇](只有专业词汇需要英文）
+[子过程3的专业词汇]
+[子过程4的专业词汇]
+[子过程5的专业词汇]
+[总结]
+注意事项
+关键词筛选必须紧扣 “有具体实现过程”，排除无明确技术流程的概念类词汇；
+大框架问题需围绕 “过程”“步骤”“要点” 展开，不偏离技术落地逻辑；
+子过程需对应不同技术模块，不重复、不遗漏关键环节，聚焦 “具体实现”“技术细节”“操作逻辑”；
+专业词汇要能用于相关领域的论文检索，且只有专业词汇是英文，其他内容是中文；
+仅输出上述指定内容，不添加关键词、解答或其他无关信息，格式简洁可直接使用。
+请基于上述要求，处理我提供的新闻内容，完整输出选中关键词对应的大框架问题、子过程、是否推荐、专业词汇、总结等信息。
+输出示例：
+DeepSeekMath - V2 模型实现奥数金牌级数学能力的核心技术实现过程和关键要点是什么收集国际奥数等多类高难度数学竞赛真题构建专项训练数据集基于深度学习框架搭建适配数学推理的模型网络架构与参数体系采用定理证明专项训练法强化模型对复杂数学逻辑的推导能力通过多轮竞赛真题测试迭代优化模型的解题准确率与步骤规范性开展跨竞赛场景适配测试确保模型在不同数学赛事场景的通用性11100Mathematical competition dataset constructionDeep learning network architectureTheorem - proving specialized trainingModel accuracy iterative optimizationCross - competition scenario adaptation testing先收集多类高难度数学竞赛真题构建专项数据集，再搭建适配数学推理的深度学习网络架构，接着通过定理证明专项训练强化模型逻辑推导能力，随后依托多轮真题测试优化解题准确率，最后经跨竞赛场景测试保障通用性，以此实现 DeepSeekMath - V2 模型达到奥数金牌级的数学解题能力。
+`;
 
     const questionThreadId = await threadPresenter.createConversation('新闻问题生成', {
           providerId: activeModel.value.providerId,
@@ -888,10 +919,11 @@ const handleProcessNewsAndGenerateQuestions = async () => {
 }
 
 const handleSend = async (content: UserMessageContent) => {
+  const sampleFileContent = await window.api.readLocalFile('output.txt');
   const threadId = await chatStore.createThread(content.text, {
     providerId: activeModel.value.providerId,
     modelId: activeModel.value.id,
-    systemPrompt: systemPrompt.value,
+    systemPrompt: sampleFileContent,
     temperature: temperature.value,
     contextLength: contextLength.value,
     maxTokens: maxTokens.value,
