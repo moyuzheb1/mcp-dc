@@ -71,7 +71,7 @@ def load_papers_from_file(file_path: str = PAPERS_CSV_PATH) -> List[Dict[str, st
                 papers.append({
                     "id": row["id"],
                     "title": row["title"],
-                    "abstract": row["abstract"]
+                    "abstract": row["abstract"],
                     "ai_abstract": row["ai_abstract"]  # 读取新添加的ai_abstract列
                 })
         
