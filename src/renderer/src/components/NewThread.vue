@@ -697,7 +697,7 @@ const handleRefreshButtonClick = async () => {
     // Read Sample
     let sampleContent = '';
     try {
-      sampleContent = await window.api.readLocalFile('sample.txt');
+      sampleContent = await window.api.readLocalFile('output.txt');
     } catch (err) {
       alert('无法读取sample.txt文件');
       return;

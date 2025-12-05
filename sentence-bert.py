@@ -72,9 +72,11 @@ def load_papers_from_file(file_path: str = PAPERS_CSV_PATH) -> List[Dict[str, st
                     "id": row["id"],
                     "title": row["title"],
                     "abstract": row["abstract"]
+                    "ai_abstract": row["ai_abstract"]  # 读取新添加的ai_abstract列
                 })
         
-        required_fields = {"id", "title", "abstract"}
+        # 更新必填字段检查，确保包含ai_abstract
+        required_fields = {"id", "title", "ai_abstract"}
         for idx, paper in enumerate(papers):
             if not required_fields.issubset(paper.keys()):
                 missing = required_fields - set(paper.keys())
@@ -94,9 +96,9 @@ PAPER_EMBEDDINGS = None  # 存储论文摘要的嵌入向量
 
 try:
     GLOBAL_PAPERS = load_papers_from_file()
-    # 生成摘要嵌入
+    # 生成摘要嵌入（如果需要基于ai_abstract生成嵌入，可将下面的"ai_abstract"替换为对应字段）
     logger.info("开始生成论文摘要嵌入（首次运行可能耗时）...")
-    abstracts = [paper["abstract"] for paper in GLOBAL_PAPERS]
+    abstracts = [paper["abstract"] for paper in GLOBAL_PAPERS] 
     PAPER_EMBEDDINGS = model.encode(abstracts, convert_to_tensor=True)
     logger.info(f"✅ 成功生成 {len(GLOBAL_PAPERS)} 篇论文的嵌入向量")
 except Exception as e:
@@ -127,19 +129,19 @@ def calculate_similarity(query: str) -> List[float]:
 # ---------------------- 结果处理函数 ----------------------
 def process_papers(query: str, threshold: float = DEFAULT_THRESHOLD) -> List[Dict[str, Any]]:
     if not GLOBAL_PAPERS or PAPER_EMBEDDINGS is None:
-        raise ValueError("未加载到有效论文数据，请检查：1. papers.csv是否在当前目录 2. CSV格式是否正确 3. 是否包含id/title/abstract字段")
+        raise ValueError("未加载到有效论文数据，请检查：1. papers.csv是否在当前目录 2. CSV格式是否正确 3. 是否包含id/title/ai_abstract字段")
     
     # 计算相似度
     similarities = calculate_similarity(query)
     
-    # 构建结果
+    # 构建结果，使用ai_abstract返回
     results = []
     for i, paper in enumerate(GLOBAL_PAPERS):
         score = round(similarities[i], 4)
         results.append({
             "id": paper["id"],
             "title": paper["title"],
-            "original_abstract": paper["abstract"],
+            "original_abstract": paper["ai_abstract"],  # 替换为ai_abstract
             "similarity_score": score
         })
     
@@ -167,7 +169,7 @@ class SentenceBERTRequest(BaseModel):
 class PaperResult(BaseModel):
     id: str
     title: str
-    original_abstract: str
+    original_abstract: str  # 字段名保持不变，值为ai_abstract内容
     similarity_score: float
 
 class SentenceBERTResponse(BaseModel):

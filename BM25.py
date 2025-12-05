@@ -64,8 +64,6 @@ GLOBAL_PAPERS = []
 GLOBAL_BM25_INDEX = None
 
 # ---------------------- 【你的原始加载函数】 ----------------------
-# 这里请粘贴你原来可以正常运行的 load_papers_from_file 函数
-# 为了演示，我假设它长这样。如果你的不同，请务必替换成你的版本！
 def load_papers_from_file(file_path: str = PAPERS_CSV_PATH) -> List[Dict[str, str]]:
     logger.info(f"开始读取论文文件：{os.path.abspath(file_path)}")
     if not os.path.exists(file_path):
@@ -74,12 +72,13 @@ def load_papers_from_file(file_path: str = PAPERS_CSV_PATH) -> List[Dict[str, st
     papers = []
     with open(file_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
-        # 假设你的列名是 'id', 'title', 'abstract'，如果不是，请修改
+        # 读取新增的ai_abstract列，替换原来的abstract
         for row in reader:
             papers.append({
                 "id": row["id"],
                 "title": row["title"],
                 "abstract": row["abstract"]
+                "ai_abstract": row["ai_abstract"]  # 改为读取ai_abstract列
             })
     
     logger.info(f"✅ 成功读取 {len(papers)} 篇论文")
@@ -205,7 +204,8 @@ def process_papers(query: str, k1: float = DEFAULT_K1, b: float = DEFAULT_B) -> 
         # 如果文件中没有索引，则现场构建并保存
         if GLOBAL_BM25_INDEX is None:
             logger.info("索引未找到，正在进行首次预处理和索引构建（此过程仅一次）...")
-            abstracts = [paper["abstract"] for paper in GLOBAL_PAPERS]
+            
+            abstracts = [paper["abstract"] for paper in GLOBAL_PAPERS]  # 若需基于ai_abstract构建索引，保持此句；若仍基于原abstract，需改回原字段
             cleaned_abs = [clean_text_en(abs_text) for abs_text in abstracts]
             tokenized_abs = [tokenize_en(abs_text) for abs_text in cleaned_abs]
             GLOBAL_BM25_INDEX = build_bm25_index(tokenized_abs)
@@ -216,13 +216,13 @@ def process_papers(query: str, k1: float = DEFAULT_K1, b: float = DEFAULT_B) -> 
     doc_freqs, doc_lengths, avgdl, term_freqs = GLOBAL_BM25_INDEX
     bm25_scores = calculate_bm25(query, doc_freqs, doc_lengths, avgdl, term_freqs, k1, b)
     
-    # 结果处理
+    # 结果处理：返回ai_abstract
     results = []
     for i, paper in enumerate(GLOBAL_PAPERS):
         results.append({
             "id": paper["id"],
             "title": paper["title"],
-            "original_abstract": paper["abstract"],
+            "original_abstract": paper["ai_abstract"],  # 替换为ai_abstract
             "bm25_score": round(bm25_scores[i], 4),
         })
     
