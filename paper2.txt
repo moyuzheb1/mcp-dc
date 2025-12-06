@@ -1,15 +1,15 @@
-2511.14446
-Agentic Video Intelligence: A Flexible Framework for Advanced Video Exploration and Understanding
-针对现有视频理解方法在复杂推理和迭代细化方面的局限，提出了 Agentic Video Intelligence (AVI) 框架。AVI 无需训练，通过系统级设计模拟人类视频理解过程，引入了“检索-感知-回顾”三阶段推理机制，结合实体图结构的视频知识库和多粒度工具。该框架集成了开源推理 LLM、轻量级 CV 模型和 VLM，摆脱了对专有 API 或 RL 训练的依赖。在 LVBench、VideoMME-Long 等基准测试中，AVI 展现了具有竞争力的性能和优越的可解释性。
-2511.14022
-Keeping Code-Aware LLMs Fresh: Full Refresh, In-Context Deltas, and Incremental Fine-Tuning
-针对代码库快速演进导致的 LLM 知识过时问题，比较了全量刷新（Full Refresh）、上下文增量（ICL with Deltas）和增量微调（Inc-FT）三种更新策略。引入了别名感知评估协议和遗忘探针。在 Flask、Pandas 等库上的实验表明：混合旧数据的 Inc-FT 在综合性能上最佳；基于英语摘要 Delta 的 ICL 在无法训练时提升最快；Full Refresh 仍是新代码准确率的上限。此外，Git-diff 微调适用于重命名/删除场景，而全文件微调在行为变更场景下更优。
-2511.14461
-Effective Diversification of Multi-Carousel Book Recommendation
-针对公共图书馆网络目录中多轮播（Multi-Carousel）界面仅提供导航便利但缺乏推荐多样性的问题，本文在协同过滤算法之上提出了多种提升项目多样性（如体裁和作者）的策略。通过引入新的评估指标，实验证明所提出的系统在保持推荐准确性的同时，有效地平衡了多样性等超准确性（beyond-accuracy）指标，从而在基于轮播的界面中提供更具吸引力的书籍推荐。
-2511.14096
-NeuroPath: Neurobiology-Inspired Path Tracking and Reflection for Semantically Coherent Retrieval
-针对 Graph-based RAG 在多跳问答中语义连贯性差和噪声高的问题，受神经生物学位置细胞路径规划启发，提出了 NeuroPath 框架。该方法包含动态路径追踪（在知识图谱上进行目标导向的修剪与追踪）和检索后补全（二次检索补充缺失信息）。在三个多跳 QA 数据集上，NeuroPath 的 recall@2 和 recall@5 分别提升 16.3% 和 13.5%，Token 消耗减少 22.8%，且在多个小模型上展现了鲁棒性和可扩展性。
-2511.14446
-Agentic Video Intelligence: A Flexible Framework for Advanced Video Exploration and Understanding
-针对现有视频理解方法在复杂推理和迭代细化方面的局限，提出了 Agentic Video Intelligence (AVI) 框架。AVI 无需训练，通过系统级设计模拟人类视频理解过程，引入了“检索-感知-回顾”三阶段推理机制，结合实体图结构的视频知识库和多粒度工具。该框架集成了开源推理 LLM、轻量级 CV 模型和 VLM，摆脱了对专有 API 或 RL 训练的依赖。在 LVBench、VideoMME-Long 等基准测试中，AVI 展现了具有竞争力的性能和优越的可解释性。
+2511.14136
+Beyond Accuracy: A Multi-Dimensional Framework for Evaluating Enterprise Agentic AI Systems
+针对现有 AI 智能体基准仅关注准确性而忽视企业需求（成本、可靠性等）的问题，提出了 CLEAR 评估框架（涵盖成本、延迟、功效、保障、可靠性）。通过对 6 个主流智能体在 300 项任务上的评估发现，仅优化准确性会导致成本高出 4.4-10.8 倍。CLEAR 框架在预测生产成功率方面与专家评估的相关性（0.83）远高于仅基于准确性的评估（0.41），为企业级 AI 部署提供了更全面的指导。
+2511.14017
+From Narrow Unlearning to Emergent Misalignment: Causes, Consequences, and Containment in LLMs
+研究发现针对特定领域（如网络安全、安全概念）的狭窄拒绝遗忘（Refusal Unlearning）会导致涌现性错位（Emergent Misalignment
+2511.14013
+Developing a Grounded View of AI
+本文从工程角度审视 AI 行为，探讨其与基于规则软件的根本区别。文章主张保护人类追求规则理性的价值，并指出 AI 行为规则虽隐蔽，但可通过所提出的方法论对三种决策类型的 AI 行为进行辨析。这是界定人类责任、确保 AI 系统健全性及造福人类社会的前提。
+2511.14565
+Masked IRL: LLM-Guided Reward Disambiguation from Demonstrations and Language
+针对从演示中学习奖励函数易过拟合无关状态细节的问题，提出了 Masked IRL 框架。该方法利用大语言模型（LLM）结合演示（展示如何行动）与自然语言指令（指定重点）的互补信息。Masked IRL 通过 LLM 从指令推断状态相关性掩码，强制模型对无关状态保持不变性，并利用 LLM 推理在演示上下文中消除指令歧义。仿真和真机实验表明，该方法比现有语言条件 IRL 方法性能提升 15%，且数据需求量减少 4.7 倍，显著提高了样本效率和对歧义语言的鲁棒性。
+2511.14591
+Biased Minds Meet Biased AI: How Class Imbalance Shapes Appropriate Reliance and Interacts with Human Base Rate Neglect
+本文探讨了 AI 偏差（类别不平衡）与人类偏差（基率忽略）在决策中的复杂交互。通过一项 N=46 的疾病分类实验，参与者使用在平衡或不平衡数据集上训练的 AI 辅助决策。结果发现，类别不平衡破坏了参与者对 AI 依赖的校准能力。更重要的是，观察到类别不平衡与基率忽略之间存在相互增强的效应，证实了复合人机偏差的存在。这表明需要从交互视角研究偏差，关注人机协作中偏差的相互强化作用。

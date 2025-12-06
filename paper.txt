@@ -1,15 +1,15 @@
-2511.14624
-Active Matter as a framework for living systems-inspired Robophysics
-机器人物理学致力于研究现实环境中仿生机器人的物理原理。尽管技术进步显著，个体运动和群体协作（如共识、通信、成本效率）仍面临瓶颈。本文提出将“活性物质（Active Matter）”物理学作为理解和设计仿生机器人集群的框架。通过回顾近期研究，文章探讨了如何将活性物质物理和生物学原理融入机器人群体的建模与设计中，以解决群体协调和效率限制，为构建具备生命特征的高效机器人集群提供了新的物理视角。
-2511.14445
-Tell Me: An LLM-powered Mental Well-being Assistant with RAG, Synthetic Dialogue Generation, and Agentic Planning
-本文推出了 Tell Me，一个基于大语言模型的心理健康支持系统，旨在提供个性化、情境感知的辅助。该系统集成了三部分：基于检索增强生成（RAG）的对话助手、基于客户画像的合成客户-治疗师对话生成器（用于数据增广与研究），以及基于 CrewAI 的健康 AI 团队（生成自理计划和冥想音频）。Tell Me 定位为情感处理的反思空间，而非专业治疗替代品。通过合成数据解决隐私数据稀缺问题，并利用代理工作流实现动态自适应护理。评估显示该系统在心理健康场景中表现良好，展示了 NLP 与心理健康跨学科合作的潜力。
-2511.14052
-Making Evidence Actionable in Adaptive Learning
-针对自适应学习干预不及时或不匹配的问题，提出了一种将评估证据转化为微干预的反馈循环机制。算法集成了充分性、注意力预算和多样性三重保障，将干预分配形式化为二元整数规划问题。在 1204 名学生的物理课程实验中，贪婪算法和基于梯度的松弛算法均在有限时间内实现了技能全覆盖。基于梯度的方法减少了 12% 的冗余覆盖并平衡了难度，而贪婪方法在资源稀缺场景下更高效。该系统为大规模课堂提供了可审计、负载感知的个性化学习方案。
-2511.14461
-Effective Diversification of Multi-Carousel Book Recommendation
-针对公共图书馆网络目录中多轮播（Multi-Carousel）界面仅提供导航便利但缺乏推荐多样性的问题，本文在协同过滤算法之上提出了多种提升项目多样性（如体裁和作者）的策略。通过引入新的评估指标，实验证明所提出的系统在保持推荐准确性的同时，有效地平衡了多样性等超准确性（beyond-accuracy）指标，从而在基于轮播的界面中提供更具吸引力的书籍推荐。
+2511.14136
+Beyond Accuracy: A Multi-Dimensional Framework for Evaluating Enterprise Agentic AI Systems
+针对现有 AI 智能体基准仅关注准确性而忽视企业需求（成本、可靠性等）的问题，提出了 CLEAR 评估框架（涵盖成本、延迟、功效、保障、可靠性）。通过对 6 个主流智能体在 300 项任务上的评估发现，仅优化准确性会导致成本高出 4.4-10.8 倍。CLEAR 框架在预测生产成功率方面与专家评估的相关性（0.83）远高于仅基于准确性的评估（0.41），为企业级 AI 部署提供了更全面的指导。
+2511.14178
+Towards Deploying VLA without Fine-Tuning: Plug-and-Play Inference-Time VLA Policy Steering via Embodied Evolutionary Diffusion
+针对预训练 VLA 模型在下游部署中性能下降且微调成本高的问题，提出了 VLA-Pilot。这是一种即插即用的推理时策略引导方法，利用具身进化扩散技术，无需微调或额外数据采集即可实现零样本部署。在 6 个真实操作任务和 2 种机器人实体上的评估表明，VLA-Pilot 显著提升了现有 VLA 策略的成功率，实现了对不同任务和实体的鲁棒零样本泛化。
+2511.14057
+A Machine Learning-Based Multimodal Framework for Wearable Sensor-Based Archery Action Recognition and Stress Estimation
+针对射箭运动中动作识别与压力评估的需求，开发了一种基于穿戴式传感器的多模态机器学习框架。利用自研腕带采集加速度和 PPG 数据，提出 SmoothDiff 特征结合 LSTM 识别动作相位（准确率 96.8%），并通过 PPG 提取 HRV 特征结合 MLP 评估压力水平（准确率 80%）。该系统为精准运动训练提供了低成本、非侵入式的实时反馈方案。
+2511.14230
+ArbESC+: Arabic Enhanced Edit Selection System Combination for Grammatical Error Correction Resolving conflict and improving system combination in Arabic GEC
+针对阿拉伯语语法错误纠正（GEC）的复杂性，提出了首个多系统组合框架 ArbESC+。该方法集成 AraT5、ByT5 等多个模型的纠正建议，将其转化为数值特征，并通过分类器选择最佳纠正。利用重叠过滤和决策可靠性估计技术提升质量。在 QALB-14/15 数据集上，F0.5 分数分别达到 82.63% 和 84.64%，显著优于单模型，证明了系统组合在处理复杂形态语言 GEC 中的有效性。
 2511.14476
 Operationalizing Pluralistic Values in Large Language Model Alignment Reveals Trade-offs in Safety, Inclusivity, and Model Behavior
 为研究多元价值观对 LLM 对齐的影响，本文收集了美德两国 1095 名参与者的对齐数据，涵盖毒性、情感意识等五个维度。研究发现显著的人口统计学差异：例如，保守派和黑人参与者对情感意识的评分显著不同。技术层面，保留评分者分歧比多数投票法多减少 53% 的毒性，5 分制量表比二元制多减少 22%，且直接偏好优化（DPO）在多值优化中优于群体相对策略优化（GRPO）。结果表明，对齐策略需平衡专家与用户信号，并考虑社会多样性。
