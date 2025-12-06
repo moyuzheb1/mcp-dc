@@ -38,6 +38,9 @@
         <button class="nav-btn" @click="handleActionButtonClick">
           <span class="icon">🧠</span> 智能推荐
         </button>
+        <button class="nav-btn" @click="handleStudyReportClick">
+          <span class="icon">📊</span> 学习报告
+        </button>
       </nav>
 
       <div class="bottom-status">
@@ -1214,6 +1217,10 @@ const handleQuestionGenerateClick = () => {
 
 const handleBackToHome = () => {
   router.push('/chat')
+}
+
+const handleStudyReportClick = () => {
+  router.push('/study-report')
 }
 
 // Token helper

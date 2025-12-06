@@ -34,6 +34,15 @@ const router = createRouter({
         icon: 'lucide:help-circle'
       }
     },
+    {
+      path: '/study-report',
+      name: 'study-report',
+      component: () => import('@/views/StudyReportView.vue'),
+      meta: {
+        titleKey: 'routes.studyReport',
+        icon: '📊'
+      }
+    },
     ...(import.meta.env.VITE_ENABLE_PLAYGROUND === 'true'
       ? [
           {
