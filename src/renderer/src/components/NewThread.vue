@@ -638,7 +638,7 @@ const handleActionButtonClick = async () => {
   try {
     const fileContent = await window.api.readLocalFile('user-preferences.txt');
     if (fileContent) {
-      const queryMessage = `请你用arxiv-mcp-server的工具查找三篇和${fileContent}有关的论文，要新一点，sort_by参数为date。你的回答应该遵循以下格式，每行小标题加粗：标题：此处为对应标题\n摘要：此处为对应摘要，中文，控制在二十字以内\n链接：此处为对应论文链接`;
+      const queryMessage = `请你用arxiv-mcp-server的工具查找三篇论文，sort_by参数为date。你的回答只包含对摘要的中文总结,要求有研究背景，现有问题，创新方案，关键细节，实验结果，220字左右。实例如下：抽象推理语料库（ARC）旨在推动抽象推理研究，这是人类智能的核心方面。现有方法多将 ARC 视为语言导向问题，采用大型语言模型（LLMs）或循环推理模型解决。但 ARC 中的拼图任务本质是视觉问题，却缺乏视觉中心方案。本文将 ARC 归为视觉范式，提出基于视觉的图到图翻译框架。该方法以 “画布” 形式处理输入，采用视觉 Transformer（ViT）架构，仅使用 ARC 数据集从零开始训练，并通过测试时训练实现泛化。所提 VARC 框架在 ARC-1 数据集上达到 60.4% 的准确率，不仅超越同类从零训练方法，还能比肩顶尖 LLMs 的性能，同时接近人类平均水平，为视觉推理提供了新的研究方向。`;
       await handleSend({
         text: queryMessage,
         files: [],

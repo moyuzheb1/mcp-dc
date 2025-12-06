@@ -97,7 +97,7 @@
         <!-- 顶部标题区 -->
         <header class="content-header">
           <div class="topic-tag">当前课题</div>
-          <h1 class="main-title">[如何设计一个高效的AI工具选择系统以提升用户体验和工具匹配度]</h1>
+         <h1 class="main-title">{{ sampleTitle || '点击生成问题或输入开始学习' }}</h1>
           
           <!-- 难度控制区 -->
           <div class="difficulty-controls">
@@ -168,7 +168,7 @@
                     >
                       <TextReveal :text="paper2Data[index].title" /></a>
                     <div class="paper-abstract">
-                      <strong>S-BERT 摘要:</strong> <TextReveal :text="paper2Data[index].abstract" />
+                      <strong>AI 摘要:</strong> <TextReveal :text="paper2Data[index].abstract" />
                     </div>
                   </div>
                 </div>
@@ -690,8 +690,6 @@ const loadingStatus = ref<string | null>(null)
 let loadingStatusTimer: NodeJS.Timeout | null = null
 
 // 步骤计数器
-let stepCounter = -3
-
 // 设置加载状态并添加超时监控
 const setLoadingStatus = (status: string, step?: number) => {
   // 清除之前的定时器
@@ -700,13 +698,7 @@ const setLoadingStatus = (status: string, step?: number) => {
     loadingStatusTimer = null
   }
   
-  // 更新步骤计数器
-  if (step) {
-    stepCounter = step
-  } else {
-    stepCounter++
-  }
-  
+
   // 更新状态，添加步骤信息
   const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false })
   const detailedStatus = `${status} (${timestamp})`
@@ -1242,8 +1234,6 @@ const handleProcessNewsAndGenerateQuestions = async () => {
   try {
     
     
-    // 重置步骤计数器
-    stepCounter = 0
     
     // 显示AI思考中状态 - 更详细的描述
     setLoadingStatus('AI正在分析任务需求，准备处理新闻内容...', 1);
@@ -1297,15 +1287,14 @@ const handleProcessNewsAndGenerateQuestions = async () => {
         return parts.join('\n').trim();
     }
 
-    // 切换到MessageList的UI视图
-    showMessageListUI.value = true;
+    
 
 
     let newsContent = '';
     // Polling logic (simplified for brevity, original logic preserved in spirit)
     setLoadingStatus('正在轮询获取新闻处理结果，解析和整理关键信息...');
     
-    await new Promise(r => setTimeout(r, 4000));
+    //await new Promise(r => setTimeout(r, 4000));
     const msgsRes: any = await threadPresenter.getMessages(newsThreadId, 1, 100);
     const assistantMsg = msgsRes?.list?.find((m: any) => m.role === 'assistant' && m.content && m.content.length > 0);
     if(assistantMsg) newsContent = extractAssistantText(assistantMsg);
@@ -1322,7 +1311,7 @@ const handleProcessNewsAndGenerateQuestions = async () => {
     }
     
     // 显示获取到的新闻内容摘要
-    const newsSummary = newsContent.substring(0, 50) + '...'
+    const newsSummary = newsContent.substring(0, 100) + '...'
     setLoadingStatus(`新闻获取完成：${newsSummary}，正在准备生成结构化问题...`);
     
     newsContent = truncateTextToTokens(newsContent, 300);
@@ -1399,7 +1388,7 @@ DeepSeekMath - V2 模型实现奥数金牌级数学能力的核心技术实现�
     // Polling logic with status update
     setLoadingStatus('正在轮询获取问题生成结果，整理和优化最终问题结构...');
     
-    await new Promise(r => setTimeout(r, 4000));
+    //await new Promise(r => setTimeout(r, 4000));
     const qMsgsRes: any = await threadPresenter.getMessages(questionThreadId, 1, 100);
     const qMsg = qMsgsRes?.list?.find((m: any) => m.role === 'assistant');
     if(qMsg) {
@@ -1433,23 +1422,12 @@ DeepSeekMath - V2 模型实现奥数金牌级数学能力的核心技术实现�
             summary.value = lines[16].trim();
           }
           
-          // 手动触发步骤卡片动画
-          setTimeout(() => {
-            if (sampleColumns.value.length > 0) {
-              // 重置步骤状态
-              activeSteps.value = Array(sampleColumns.value.length).fill(false);
-              
-              // 依次激活每个步骤卡片
-              sampleColumns.value.forEach((_, index) => {
-                setTimeout(() => {
-                  activeSteps.value[index] = true;
-                }, index * 2000); // 每个步骤间隔2000ms显示
-              });
-            }
-          }, 500); // 延迟500ms开始动画，让用户有时间看到更新后的内容
         }
         
         setLoadingStatus('结构化问题生成成功，步骤卡片正在更新...');
+
+        // 切换到MessageList的UI视图
+        showMessageListUI.value = true;
         // 短暂延迟以便用户看到最后一个状态
         setTimeout(() => {
           loadingStatus.value = null;
