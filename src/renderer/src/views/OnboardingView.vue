@@ -337,9 +337,9 @@ const currentFieldObj = computed(() => {
                 <div class="detail-features">
                   <h4>DePaper 将为你准备：</h4>
                   <ul>
-                    <li>✅ 该领域经典的入门综述推荐</li>
-                    <li>✅ 专属的 arXiv 订阅源配置</li>
-                    <li>✅ 针对该领域的术语解释库</li>
+                    <li>✅ 该领域的课题推荐</li>
+                    <li>✅ 一个专门服务你的科研AI助手</li>
+                    <li>✅ 为你定制的学习报告</li>
                   </ul>
                 </div>
               </div>
