@@ -14,5 +14,6 @@ declare global {
       getPathForFile: (file: File) => string;
     };
     floatingButtonAPI: any;
+    resetInitComplete: () => Promise<void>;
   }
 }

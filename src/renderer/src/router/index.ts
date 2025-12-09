@@ -5,7 +5,25 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/chat'
+      redirect: '/onboarding'
+    },
+    {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('@/views/OnboardingView.vue'),
+      meta: {
+        titleKey: 'routes.onboarding',
+        icon: 'lucide:sparkles'
+      }
+    },
+    {
+      path: '/thread/new',
+      name: 'newThread',
+      component: () => import('@/components/NewThread.vue'),
+      meta: {
+        titleKey: 'routes.newThread',
+        icon: 'lucide:plus'
+      }
     },
     {
       path: '/chat',

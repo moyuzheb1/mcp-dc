@@ -131,9 +131,9 @@ const router = useRouter()
 const activeTab = ref('chat')
 
 const getInitComplete = async () => {
-  const initComplete = await configPresenter.getSetting('init_complete')
-  if (!initComplete) {
-    router.push({ name: 'welcome' })
+  // 每次启动应用都显示引导页，但避免循环重定向
+  if (router.currentRoute.value.name !== 'onboarding' && router.currentRoute.value.name !== 'newThread') {
+    router.push({ name: 'onboarding' })
   }
 }
 
@@ -183,15 +183,16 @@ const handleEscKey = (event: KeyboardEvent) => {
   }
 }
 
-getInitComplete()
-
-onMounted(() => {
+onMounted(async () => {
   devicePresenter.getDeviceInfo().then((deviceInfo) => {
     isMacOS.value = deviceInfo.platform === 'darwin'
   })
   // Set initial body class
   document.body.classList.add(themeStore.themeMode)
   document.body.classList.add(settingsStore.fontSizeClass)
+  
+  // Check if it's the first time using the app and redirect to onboarding page
+  await getInitComplete()
 
   window.addEventListener('keydown', handleEscKey)
 
@@ -267,10 +268,15 @@ onMounted(() => {
     () => route.fullPath,
     (newVal) => {
       const pathWithoutQuery = newVal.split('?')[0]
-      const newTab =
-        pathWithoutQuery === '/'
-          ? (route.name as string)
-          : pathWithoutQuery.split('/').filter(Boolean)[0] || ''
+      let newTab = ''
+      if (pathWithoutQuery === '/') {
+        newTab = route.name as string
+      } else if (pathWithoutQuery === '/thread/new') {
+        // 特殊处理NewThread路由，避免解析为'thread'
+        newTab = 'newThread'
+      } else {
+        newTab = pathWithoutQuery.split('/').filter(Boolean)[0] || ''
+      }
       if (newTab !== activeTab.value) {
         activeTab.value = newTab
       }
