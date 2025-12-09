@@ -1,254 +1,741 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePresenter } from '@/composables/usePresenter'
 
+// --- 基础配置 ---
 const router = useRouter()
 const configPresenter = usePresenter('configPresenter')
-const currentStage = ref(1)
 
-// 跳转到下一个阶段
-const goToNextStage = () => {
-  if (currentStage.value < 3) {
-    currentStage.value++
+// logo图片地址 (本地icon.png)
+const logoUrl = '/icon.png'
+
+// --- 状态管理 ---
+const currentStage = ref(1) // 1: 欢迎, 2: 问卷, 3: 结果/选择
+const currentQuestionIndex = ref(0)
+const isCalculating = ref(false)
+const isSkipped = ref(false) // 标记用户是否跳过了问卷
+
+const userAnswers = reactive<Record<number, string>>({})
+const finalSelectedField = ref('') // 最终选择的ID
+
+// --- 问卷数据配置 (保持不变) ---
+const questions = [
+  {
+    id: 1,
+    text: "想象你正在玩一款非常复杂的解谜游戏，你最享受的过程是：",
+    options: [
+      { key: 'A', text: "欣赏画面和特效：被精美的场景、光影效果吸引。" },
+      { key: 'B', text: "破解机关逻辑：思考机关背后的逻辑链条，享受智力挑战。" },
+      { key: 'C', text: "寻找系统漏洞：试图卡墙、穿模，看看游戏会不会崩。" },
+      { key: 'D', text: "惊叹NPC的反应：角色像真人一样聪明，好奇它怎么听懂人话的。" }
+    ]
+  },
+  {
+    id: 2,
+    text: "在高中数学课上，你对以下哪种内容的接受度最高？",
+    options: [
+      { key: 'A', text: "几何与立体图形：空间想象力不错，喜欢看图说话。" },
+      { key: 'B', text: "概率与统计：喜欢分析数据趋势，从数字里找规律。" },
+      { key: 'C', text: "严谨的证明题：喜欢从已知条件一步步推导的逻辑过程。" },
+      { key: 'D', text: "不太喜欢数学：更喜欢动手做实验，或者直接看到结果。" }
+    ]
+  },
+  {
+    id: 3,
+    text: "如果让你用乐高积木搭一个城堡，你更倾向于：",
+    options: [
+      { key: 'A', text: "设计外观：专注于造型、配色，怎么看着舒服。" },
+      { key: 'B', text: "搭建地基与骨架：确保结构稳固，哪怕内部别人看不见。" },
+      { key: 'C', text: "编写说明书：制定一套标准步骤，让其他人也能快速搭建。" },
+      { key: 'D', text: "研究积木本身：好奇积木的卡扣原理，想发明新形状。" }
+    ]
+  },
+  {
+    id: 4,
+    text: "假设未来发明了一款全能机器人管家，你最想知道它背后的什么秘密？",
+    options: [
+      { key: 'A', text: "它的“大脑”：它是怎么学会思考和理解情感的？" },
+      { key: 'B', text: "它的“神经”：指令传输有多快？断网了还能工作吗？" },
+      { key: 'C', text: "它的“安全性”：黑客能不能控制它？隐私会不会泄露？" },
+      { key: 'D', text: "它的“应用”：能不能帮医生分析DNA，或者帮我炒股。" }
+    ]
+  },
+  {
+    id: 5,
+    text: "当你使用的APP突然闪退或变慢时，你的第一反应是：",
+    options: [
+      { key: 'A', text: "烦躁/吐槽体验：界面设计太烂，用户体验极差。" },
+      { key: 'B', text: "好奇原因：是内存不够？还是刚才的操作触发了Bug？" },
+      { key: 'C', text: "担心数据：我的聊天记录会不会丢？密码安全吗？" },
+      { key: 'D', text: "无所谓/重启：重启能解决99%的问题，能用就行。" }
+    ]
+  },
+  {
+    id: 6,
+    text: "如果给你一项超能力用于计算机世界，你希望是：",
+    options: [
+      { key: 'A', text: "透视眼：把复杂数据瞬间变成看懂的酷炫图表。" },
+      { key: 'B', text: "读心术：让电脑完全理解我的人话，甚至预判我。" },
+      { key: 'C', text: "极速者：让全世界的电脑运行速度提升100倍。" },
+      { key: 'D', text: "规则制定者：创造一种完美语言，让程序都没有Bug。" }
+    ]
+  },
+  {
+    id: 7,
+    text: "在团队合作完成作业时，你通常扮演什么角色？",
+    options: [
+      { key: 'A', text: "展示者/美化者：负责做PPT，排版得漂漂亮亮。" },
+      { key: 'B', text: "核心攻坚者：最难啃的逻辑硬骨头由我搞定。" },
+      { key: 'C', text: "挑错者/测试员：检查错误，梳理流程。" },
+      { key: 'D', text: "跨界联络员：把技术应用到其他领域解决实际问题。" }
+    ]
+  },
+  {
+    id: 8,
+    text: "对于“枯燥的重复劳动”（比如整理一千个文件），你的态度是？",
+    options: [
+      { key: 'A', text: "难以忍受：一定要写个脚本程序自动完成它。" },
+      { key: 'B', text: "寻找规律：观察文件特征，通过数据分析来归类。" },
+      { key: 'C', text: "耐心完成：为了宏大的目标，可以忍受基础工作。" },
+      { key: 'D', text: "直接放弃：找别人来做。" }
+    ]
   }
+]
+
+// --- 领域定义 ---
+const fields = [
+  { id: 'AI', name: '人工智能与数据智能', icon:'🧠', desc: '让电脑像人一样思考，挖掘数据规律。包括机器学习、深度学习、数据挖掘、NLP等。适合数学基础较好、喜欢探索智能本质的你。' },
+  { id: 'Graphics', name: '视觉、图形与交互', icon:'🎨', desc: '创造酷炫画面，研究人机体验。包括计算机视觉、图形学、AR/VR、HCI等。适合视觉敏感、兼具技术与艺术感的你。' },
+  { id: 'Systems', name: '系统与网络', icon:'⚙️', desc: '构建底层基础设施，追求极致性能。包括操作系统、分布式系统、网络、高性能计算。适合硬核、喜欢底层原理的你。' },
+  { id: 'Security', name: '安全与隐私', icon:'🛡️', desc: '攻防博弈，保护系统与数据。包括网络安全、密码学、区块链。适合好奇心强、喜欢寻找漏洞和解谜的你。' },
+  { id: 'Theory', name: '理论计算机科学', icon:'📐', desc: '探索计算极限，推导数学证明。包括算法设计、计算复杂性、量子计算。适合逻辑严密、喜欢数学推导的你。' },
+  { id: 'SE', name: '软件工程与程序语言', icon:'📝', desc: '研究代码质量，创造开发工具。包括软件测试、程序语言设计(PL)、DevOps。适合追求规范、喜欢造轮子的你。' },
+  { id: 'Interdisciplinary', name: '交叉学科应用', icon:'🧬', desc: '用计算机技术解决其他领域难题。包括生物信息学、计算金融、机器人等。适合知识面广、喜欢跨界创新的你。' }
+]
+
+// --- 逻辑控制 ---
+
+// 1. 开始问卷
+const startSurvey = () => {
+  isSkipped.value = false
+  currentStage.value = 2
 }
 
-// 开始使用应用，跳转到NewThread页面
-const startUsingApp = async () => {
-  // 设置初始化完成标志，下次启动不再显示引导页
+// 2. 跳过问卷，直接去选择
+const skipSurvey = () => {
+  isSkipped.value = true
+  finalSelectedField.value = 'AI' // 默认选中第一个
+  currentStage.value = 3
+}
+
+// 3. 选择答案
+const selectOption = (qId: number, key: string) => {
+  userAnswers[qId] = key
+  setTimeout(() => {
+    if (currentQuestionIndex.value < questions.length - 1) {
+      currentQuestionIndex.value++
+    } else {
+      finishSurvey()
+    }
+  }, 200)
+}
+
+// 4. 结算
+const finishSurvey = () => {
+  isCalculating.value = true
+  
+  const scores: Record<string, number> = { AI: 0, Graphics: 0, Systems: 0, Security: 0, Theory: 0, SE: 0, Interdisciplinary: 0 }
+  const map = (qIdx: number, key: string, field: string) => { if (userAnswers[qIdx] === key) scores[field] += 1 }
+
+  // 判分逻辑 (同前)
+  map(1, 'D', 'AI'); map(2, 'B', 'AI'); map(4, 'A', 'AI'); map(6, 'B', 'AI'); map(8, 'B', 'AI');
+  map(1, 'A', 'Graphics'); map(2, 'A', 'Graphics'); map(3, 'A', 'Graphics'); map(5, 'A', 'Graphics'); map(6, 'A', 'Graphics'); map(7, 'A', 'Graphics');
+  map(1, 'B', 'Systems'); map(3, 'B', 'Systems'); map(4, 'B', 'Systems'); map(5, 'D', 'Systems'); map(6, 'C', 'Systems');
+  map(1, 'C', 'Security'); map(4, 'C', 'Security'); map(5, 'C', 'Security');
+  map(1, 'B', 'Theory'); map(2, 'C', 'Theory'); map(7, 'B', 'Theory');
+  map(3, 'C', 'SE'); map(3, 'D', 'SE'); map(5, 'B', 'SE'); map(6, 'D', 'SE'); map(7, 'C', 'SE'); map(8, 'A', 'SE');
+  map(4, 'D', 'Interdisciplinary'); map(7, 'D', 'Interdisciplinary');
+
+  let maxScore = -1
+  let recommended = 'AI'
+  for (const [field, score] of Object.entries(scores)) {
+    if (score > maxScore) {
+      maxScore = score
+      recommended = field
+    }
+  }
+
+  setTimeout(() => {
+    finalSelectedField.value = recommended
+    isCalculating.value = false
+    currentStage.value = 3
+  }, 800)
+}
+
+// 5. 完成并跳转
+const completeOnboarding = async () => {
+  console.log('User Field:', finalSelectedField.value)
   await configPresenter.setSetting('init_complete', true)
+  // await configPresenter.setSetting('research_field', finalSelectedField.value) 
   router.push('/thread/new')
 }
 
-// 测试用：重置初始化标志（可在控制台调用）
-window.resetInitComplete = async () => {
-  await configPresenter.setSetting('init_complete', false)
-  console.log('init_complete已重置为false，下次启动将显示引导页')
-}
+const progressPercentage = computed(() => {
+  return ((currentQuestionIndex.value + 1) / questions.length) * 100
+})
+
+// 获取当前选中的领域对象
+const currentFieldObj = computed(() => {
+  return fields.find(f => f.id === finalSelectedField.value)
+})
 </script>
 
 <template>
   <div class="onboarding-container">
-    <!-- 第一阶段：应用介绍+欢迎语 -->
-    <div v-if="currentStage === 1" class="stage-container">
-      <div class="content-wrapper">
-        <h1 class="title">欢迎使用DePaper</h1>
-        <p class="description">
-          DePaper是您的智能研究助手，帮助您高效管理和探索研究课题。
-        </p>
-        <p class="sub-description">
-          让我们一起开始您的研究之旅吧！
-        </p>
-        <button class="next-button" @click="goToNextStage">
-          下一步
-        </button>
-      </div>
-    </div>
+    <div class="background-decor"></div>
+    
+    <!-- 主窗口：使用大尺寸容器 -->
+    <div class="main-window">
+      
+      <!-- 阶段 1: 欢迎页 -->
+      <transition name="fade" mode="out-in">
+        <div v-if="currentStage === 1" class="stage-content welcome-layout" key="stage1">
+          <div class="welcome-left">
+            <img :src="logoUrl" alt="DePaper Logo" class="big-logo" />
+            <h1 class="app-title">DePaper</h1>
+            <h2 class="app-subtitle">你的桌面级科研领航员</h2>
+            <div class="divider"></div>
+            <p class="desc-text">
+              科研的第一步，是找到属于你的方向。<br>
+              我们将通过一个<strong>简单的 8 题趣味问卷</strong>，<br>
+              分析你的思维偏好，为你推荐最适合的计算机科研领域。
+            </p>
+            
+            <div class="action-area">
+              <button class="primary-button big-btn" @click="startSurvey">
+                开始探索偏好
+              </button>
+              
+              <div class="skip-area">
+                <span class="skip-hint">已经明确自己的方向了？</span>
+                <button class="text-button" @click="skipSurvey">
+                  跳过问卷，直接选择 &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="welcome-right-decor">
+            <!-- 装饰性的图形或SVG -->
+            <div class="decor-circle c1"></div>
+            <div class="decor-circle c2"></div>
+          </div>
+        </div>
 
-    <!-- 第二阶段：用户偏好调查 -->
-    <div v-if="currentStage === 2" class="stage-container">
-      <div class="content-wrapper">
-        <h1 class="title">告诉我们您的偏好</h1>
-        <p class="description">
-          我们将根据您的研究领域和兴趣，为您提供更精准的建议。
-        </p>
-        
-        <!-- 简单的偏好选择示例 -->
-        <div class="preferences-container">
-          <div class="preference-item">
-            <label class="preference-label">
-              <input type="checkbox" class="preference-checkbox">
-              <span class="preference-text">计算机科学</span>
-            </label>
+        <!-- 阶段 2: 问卷调查 (全屏宽阔布局) -->
+        <div v-else-if="currentStage === 2" class="stage-content survey-layout" key="stage2">
+          <div class="survey-top">
+            <div class="progress-container">
+              <div class="progress-bar" :style="{ width: progressPercentage + '%' }"></div>
+            </div>
+            <span class="q-counter">Q{{ currentQuestionIndex + 1 }} / {{ questions.length }}</span>
           </div>
-          <div class="preference-item">
-            <label class="preference-label">
-              <input type="checkbox" class="preference-checkbox">
-              <span class="preference-text">人工智能</span>
-            </label>
-          </div>
-          <div class="preference-item">
-            <label class="preference-label">
-              <input type="checkbox" class="preference-checkbox">
-              <span class="preference-text">数据分析</span>
-            </label>
-          </div>
-          <div class="preference-item">
-            <label class="preference-label">
-              <input type="checkbox" class="preference-checkbox">
-              <span class="preference-text">自然语言处理</span>
-            </label>
+
+          <div class="question-wrapper">
+            <h2 class="question-text">{{ questions[currentQuestionIndex].text }}</h2>
+            
+            <!-- 桌面端 2x2 网格布局 -->
+            <div class="options-grid-desktop">
+              <button 
+                v-for="opt in questions[currentQuestionIndex].options" 
+                :key="opt.key"
+                class="option-card"
+                @click="selectOption(questions[currentQuestionIndex].id, opt.key)"
+              >
+                <div class="opt-key-circle">{{ opt.key }}</div>
+                <span class="opt-text">{{ opt.text }}</span>
+              </button>
+            </div>
           </div>
         </div>
-        
-        <div class="button-group">
-          <button class="back-button" @click="currentStage = 1">
-            上一步
-          </button>
-          <button class="start-button" @click="startUsingApp">
-            开始使用
-          </button>
+
+        <!-- 阶段 3: 结果/选择 (左右分栏布局) -->
+        <div v-else-if="currentStage === 3" class="stage-content result-layout" key="stage3">
+          <div class="result-sidebar">
+            <div class="sidebar-header">
+              <h3 v-if="!isSkipped">🎯 推荐结果</h3>
+              <h3 v-else>📂 选择领域</h3>
+              <p class="sidebar-desc" v-if="!isSkipped">基于测试，我们推荐：</p>
+              <p class="sidebar-desc" v-else>请选择你感兴趣的方向：</p>
+            </div>
+            
+            <div class="field-list">
+              <div 
+                v-for="field in fields" 
+                :key="field.id"
+                class="field-item"
+                :class="{ active: finalSelectedField === field.id, recommended: (!isSkipped && finalSelectedField === field.id) }"
+                @click="finalSelectedField = field.id"
+              >
+                <span class="field-icon">{{ field.icon }}</span>
+                <span class="field-name">{{ field.name }}</span>
+                <span v-if="!isSkipped && finalSelectedField === field.id" class="badge">推荐</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="result-main">
+            <div class="detail-card">
+              <div class="detail-header">
+                <span class="huge-icon">{{ currentFieldObj?.icon }}</span>
+                <h2>{{ currentFieldObj?.name }}</h2>
+              </div>
+              <div class="detail-body">
+                <p class="detail-desc">{{ currentFieldObj?.desc }}</p>
+                <div class="detail-features">
+                  <h4>DePaper 将为你准备：</h4>
+                  <ul>
+                    <li>✅ 该领域经典的入门综述推荐</li>
+                    <li>✅ 专属的 arXiv 订阅源配置</li>
+                    <li>✅ 针对该领域的术语解释库</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="detail-footer">
+                <p class="confirm-hint">如果这不是你想要的，可以点击左侧列表切换</p>
+                <button class="primary-button big-btn confirm-btn" @click="completeOnboarding">
+                  确定并进入工作台
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </transition>
     </div>
   </div>
 </template>
 
 <style scoped>
+/* --- 全局与容器 --- */
 .onboarding-container {
   width: 100vw;
   height: 100vh;
-  background-color: white;
+  background-color: #f1f5f9;
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
   overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #334155;
 }
 
-.stage-container {
-  width: 100%;
-  max-width: 800px;
-  padding: 0 20px;
+/* 装饰背景 */
+.background-decor {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at 10% 20%, rgba(79, 70, 229, 0.05) 0%, transparent 40%),
+              radial-gradient(circle at 90% 80%, rgba(14, 165, 233, 0.05) 0%, transparent 40%);
+  z-index: 0;
+}
+
+/* 主窗口 - 桌面级尺寸 */
+.main-window {
+  position: relative;
+  z-index: 1;
+  width: 90%;
+  max-width: 1200px;
+  height: 85vh; /* 占据屏幕高度的 85% */
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  overflow: hidden;
   display: flex;
+  flex-direction: column;
+}
+
+.stage-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+/* --- Stage 1: Welcome --- */
+.welcome-layout {
+  display: flex;
+  flex-direction: row;
+}
+
+.welcome-left {
+  flex: 1;
+  padding: 60px 80px;
+  display: flex;
+  flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
 }
 
-.content-wrapper {
-  text-align: center;
-  padding: 40px;
+.big-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  margin-bottom: 24px;
 }
 
-.title {
-  font-size: 36px;
-  font-weight: 700;
-  color: #333;
+.app-title {
+  font-size: 48px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1;
+}
+
+.app-subtitle {
+  font-size: 24px;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 10px;
   margin-bottom: 20px;
 }
 
-.description {
+.divider {
+  width: 60px;
+  height: 4px;
+  background: #4f46e5;
+  margin: 20px 0 40px;
+  border-radius: 2px;
+}
+
+.desc-text {
   font-size: 18px;
-  color: #666;
-  margin-bottom: 15px;
   line-height: 1.6;
+  color: #475569;
+  max-width: 500px;
+  margin-bottom: 50px;
 }
 
-.sub-description {
-  font-size: 16px;
-  color: #888;
-  margin-bottom: 40px;
-  line-height: 1.6;
-}
-
-.next-button {
-  padding: 15px 40px;
-  font-size: 16px;
-  font-weight: 600;
-  color: white;
-  background-color: #4f46e5;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.next-button:hover {
-  background-color: #4338ca;
-  transform: translateY(-2px);
-}
-
-.preferences-container {
+.action-area {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  margin: 30px 0 40px;
-  max-width: 400px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.preference-item {
-  text-align: left;
-}
-
-.preference-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  color: #333;
-  cursor: pointer;
-}
-
-.preference-checkbox {
-  width: 18px;
-  height: 18px;
-  accent-color: #4f46e5;
-}
-
-.button-group {
-  display: flex;
-  justify-content: center;
   gap: 20px;
 }
 
-.back-button {
-  padding: 15px 30px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #666;
-  background-color: transparent;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.big-btn {
+  padding: 18px 48px;
+  font-size: 18px;
+  min-width: 240px;
 }
 
-.back-button:hover {
-  border-color: #d1d5db;
-  background-color: #f9fafb;
+.skip-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.start-button {
-  padding: 15px 40px;
-  font-size: 16px;
-  font-weight: 600;
-  color: white;
-  background-color: #4f46e5;
+.skip-hint {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.text-button {
+  background: none;
   border: none;
-  border-radius: 8px;
+  color: #4f46e5;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
-.start-button:hover {
-  background-color: #4338ca;
+.text-button:hover {
+  color: #4338ca;
+}
+
+.welcome-right-decor {
+  flex: 1;
+  background: linear-gradient(135deg, #e0e7ff 0%, #f0f9ff 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.decor-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: white;
+  opacity: 0.3;
+}
+.c1 { width: 300px; height: 300px; top: -50px; right: -50px; }
+.c2 { width: 150px; height: 150px; bottom: 100px; left: 50px; }
+
+/* --- Stage 2: Survey --- */
+.survey-layout {
+  flex-direction: column;
+  padding: 40px 80px;
+}
+
+.survey-top {
+  margin-bottom: 40px;
+}
+
+.progress-container {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #4f46e5;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.q-counter {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.question-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.question-text {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 50px;
+  color: #1e293b;
+  text-align: center;
+}
+
+.options-grid-desktop {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 双栏 */
+  gap: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.option-card {
+  display: flex;
+  align-items: center;
+  padding: 30px;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.option-card:hover {
+  border-color: #4f46e5;
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.05);
   transform: translateY(-2px);
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .title {
-    font-size: 28px;
-  }
-  
-  .description {
-    font-size: 16px;
-  }
-  
-  .sub-description {
-    font-size: 14px;
-  }
-  
-  .button-group {
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .back-button, .start-button, .next-button {
-    width: 100%;
-    max-width: 300px;
-  }
+.opt-key-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  margin-right: 20px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.option-card:hover .opt-key-circle {
+  background: #4f46e5;
+  color: white;
+}
+
+.opt-text {
+  font-size: 18px;
+  line-height: 1.5;
+  color: #334155;
+}
+
+/* --- Stage 3: Result/Selection --- */
+.result-layout {
+  display: flex;
+  flex-direction: row;
+}
+
+.result-sidebar {
+  width: 320px;
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 30px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.sidebar-header h3 {
+  margin: 0 0 5px 0;
+  font-size: 18px;
+}
+
+.sidebar-desc {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.field-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.field-item {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 5px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.field-item:hover {
+  background: #e2e8f0;
+}
+
+.field-item.active {
+  background: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  border: 1px solid #cbd5e1;
+}
+
+.field-icon {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.field-name {
+  font-size: 15px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.badge {
+  font-size: 10px;
+  background: #4f46e5;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.result-main {
+  flex: 1;
+  padding: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: white;
+}
+
+.detail-card {
+  max-width: 600px;
+  text-align: center;
+}
+
+.huge-icon {
+  font-size: 80px;
+  display: block;
+  margin-bottom: 20px;
+}
+
+.detail-header h2 {
+  font-size: 36px;
+  margin-bottom: 30px;
+  color: #1e293b;
+}
+
+.detail-desc {
+  font-size: 18px;
+  line-height: 1.6;
+  color: #475569;
+  background: #f8fafc;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+}
+
+.detail-features {
+  text-align: left;
+  margin-bottom: 40px;
+}
+
+.detail-features h4 {
+  margin-bottom: 15px;
+  color: #1e293b;
+}
+
+.detail-features ul {
+  list-style: none;
+  padding: 0;
+}
+
+.detail-features li {
+  margin-bottom: 10px;
+  font-size: 16px;
+  color: #64748b;
+}
+
+.confirm-hint {
+  font-size: 14px;
+  color: #94a3b8;
+  margin-bottom: 15px;
+}
+
+.confirm-btn {
+  width: 100%;
+}
+
+/* --- Common Buttons --- */
+.primary-button {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);
+}
+
+.primary-button:hover {
+  background: #4338ca;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.4);
+}
+
+/* --- Animations --- */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style>
