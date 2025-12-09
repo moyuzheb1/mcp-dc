@@ -226,9 +226,51 @@ const currentFieldObj = computed(() => {
             </div>
           </div>
           <div class="welcome-right-decor">
-            <!-- 装饰性的图形或SVG -->
-            <div class="decor-circle c1"></div>
-            <div class="decor-circle c2"></div>
+            <!-- 背景网格纹理 -->
+            <div class="grid-overlay"></div>
+            
+            <!-- 装饰元素 1: 神经网络/数据结构 (右上) -->
+            <div class="float-item item-1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+            </div>
+
+            <!-- 装饰元素 2: 代码符号 (左下) -->
+            <div class="float-item item-2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+            </div>
+
+            <!-- 装饰元素 3: 原子/物理/核心 (中间偏右) -->
+            <div class="float-item item-3">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="2"></circle>
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"></path>
+                <ellipse cx="12" cy="12" rx="3" ry="8" transform="rotate(45 12 12)"></ellipse>
+                <ellipse cx="12" cy="12" rx="3" ry="8" transform="rotate(-45 12 12)"></ellipse>
+              </svg>
+            </div>
+
+            <!-- 装饰元素 4: 论文/文档 (左上) -->
+            <div class="float-item item-4">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <line x1="10" y1="9" x2="8" y2="9"></line>
+              </svg>
+            </div>
+
+            <!-- 装饰光晕 -->
+            <div class="glow-effect"></div>
           </div>
         </div>
 
@@ -455,18 +497,112 @@ const currentFieldObj = computed(() => {
   color: #4338ca;
 }
 
+/* --- 右侧科研主题背景（新版：柔和通透风格） --- */
 .welcome-right-decor {
   flex: 1;
-  background: linear-gradient(135deg, #e0e7ff 0%, #f0f9ff 100%);
+  /* 修改1：颜色不再是死黑蓝，而是更柔和的靛蓝到紫罗兰的渐变，衔接更自然 */
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 给左侧边缘加一点内阴影，让过渡不那么生硬 */
+  box-shadow: inset 10px 0 20px -10px rgba(0, 0, 0, 0.1);
 }
 
-.decor-circle {
+/* 网格纹理 */
+.grid-overlay {
   position: absolute;
-  border-radius: 50%;
-  background: white;
-  opacity: 0.3;
+  top: 0; left: 0; right: 0; bottom: 0;
+  /* 网格线稍微亮一点 */
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+  z-index: 1;
+  opacity: 0.3; /* 整体网格淡一点，不要喧宾夺主 */
+}
+
+/* 装饰光晕 */
+.glow-effect {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  /* 修改2：光晕改为亮白色，增加通透感 */
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* 悬浮图标通用样式 */
+.float-item {
+  position: absolute;
+  z-index: 3;
+  /* 修改3：大幅提升不透明度，从0.15改为0.6，并在hover时更亮 */
+  color: #fff;
+  opacity: 0.6; 
+  filter: drop-shadow(0 2px 10px rgba(0,0,0,0.1));
+  animation: float-anim 6s ease-in-out infinite;
+  transition: opacity 0.3s ease;
+}
+
+/* 鼠标放上去时，图标变亮，增加互动感 */
+.welcome-right-decor:hover .float-item {
+  opacity: 0.9;
+}
+
+.float-item svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.5; /* 线条稍微细一点，显精致 */
+}
+
+/* --- 图标位置微调 (保持不变或微调) --- */
+.item-1 { /* 神经网络 */
+  width: 140px;
+  height: 140px;
+  top: 10%;
+  right: 10%;
+  animation-delay: 0s;
+  transform: rotate(10deg);
+}
+
+.item-2 { /* 代码 */
+  width: 110px;
+  height: 110px;
+  bottom: 15%;
+  left: 10%;
+  animation-delay: 2s;
+}
+
+.item-3 { /* 核心原子 */
+  width: 220px;
+  height: 220px;
+  top: 40%;
+  left: 50%;
+  /* 这个大图标稍微淡一点，作为背景烘托 */
+  opacity: 0.25; 
+  animation-delay: 1s;
+}
+
+.item-4 { /* 文档 */
+  width: 90px;
+  height: 90px;
+  top: 15%;
+  left: 15%;
+  animation-delay: 3s;
+  transform: rotate(-15deg);
+}
+
+/* 漂浮动画 */
+@keyframes float-anim {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); } 
+  100% { transform: translateY(0px); }
 }
 .c1 { width: 300px; height: 300px; top: -50px; right: -50px; }
 .c2 { width: 150px; height: 150px; bottom: 100px; left: 50px; }
