@@ -174,11 +174,11 @@ const finishSurvey = () => {
 }
 
 // 5. 完成并跳转
-const completeOnboarding = async () => {
+const completeOnboarding = () => {
   console.log('User Field:', finalSelectedField.value)
-  await configPresenter.setSetting('init_complete', true)
-  // await configPresenter.setSetting('research_field', finalSelectedField.value) 
-  router.push('/thread/new')
+  configPresenter.setSetting('init_complete', true)
+  configPresenter.setSetting('research_field', finalSelectedField.value)
+  router.push('/question')
 }
 
 const progressPercentage = computed(() => {
