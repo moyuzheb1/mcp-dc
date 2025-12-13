@@ -26,21 +26,25 @@
         <span class="logo-text">DePaper</span>
       </div>
       
+      <!-- 恢复 File 1 的功能按钮列表，但保持 File 2 的样式风格 -->
       <nav class="nav-menu">
-        <div class="nav-group-label">工作台</div>
-        <button class="nav-btn" :class="{ active: !showMessageListUI }" @click="handleBackToHome">
-          <span class="icon">🏠</span> 首页概览
+        <button class="nav-btn primary" @click="handleRefreshButtonClick">
+          <span class="icon">🔄</span> 刷新内容
         </button>
-        <button class="nav-btn" @click="handleRefreshButtonClick">
-          <span class="icon">🔄</span> 刷新数据
+        <button class="nav-btn" @click="handleQuestionGenerateClick">
+          <span class="icon">✨</span> 问题生成
+        </button>
+        <button class="nav-btn" :class="{ active: !showMessageListUI }" @click="handleBackToHome">
+          <span class="icon">🏠</span> 回到首页
         </button>
         
-        <div class="nav-group-label mt-4">工具箱</div>
-        <button class="nav-btn" @click="handleQuestionGenerateClick">
-          <span class="icon">✨</span> 问题生成器
+        <div class="nav-divider"></div>
+        
+        <button class="nav-btn" @click="handleProcessNewsAndGenerateQuestions">
+          <span class="icon">📰</span> 新闻问题
         </button>
         <button class="nav-btn" @click="handleActionButtonClick">
-          <span class="icon">🧠</span> 深度推荐
+          <span class="icon">🧠</span> 智能推荐
         </button>
         <button class="nav-btn" @click="handleStudyReportClick">
           <span class="icon">📊</span> 学习报告
@@ -368,6 +372,14 @@
   gap: 8px;
 }
 
+/* 新增：侧边栏分割线样式 */
+.nav-divider {
+  height: 1px;
+  background-color: #e2e8f0;
+  margin: 12px 0;
+  flex-shrink: 0;
+}
+
 .nav-group-label {
   font-size: 12px;
   color: #94a3b8;
@@ -403,6 +415,18 @@
   background-color: #4f46e5;
   color: white;
   box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+}
+
+/* 新增：主操作按钮强调样式 (对应 File 1 的 primary) */
+.nav-btn.primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+}
+.nav-btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(79, 70, 229, 0.4);
 }
 
 .sidebar-footer {
