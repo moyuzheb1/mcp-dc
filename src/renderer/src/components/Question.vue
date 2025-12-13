@@ -49,6 +49,9 @@
         <button class="nav-btn" @click="handleStudyReportClick">
           <span class="icon">📊</span> 学习报告
         </button>
+        <button class="nav-btn" @click="handlePaperAnalysisClick">
+          <span class="icon">📄</span> 论文拆解
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -1400,6 +1403,7 @@ const handleDifficultyButtonClick = (difficulty: string) => {
 const handleQuestionGenerateClick = () => { router.push('/question') }
 const handleBackToHome = () => { showMessageListUI.value = false; }
 const handleStudyReportClick = () => { router.push('/study-report') }
+const handlePaperAnalysisClick = () => { router.push('/paper-analysis') }
 
 const handleActionButtonClick = async () => {
   try {

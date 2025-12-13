@@ -61,6 +61,15 @@ const router = createRouter({
         icon: '📊'
       }
     },
+    {
+      path: '/paper-analysis',
+      name: 'paper-analysis',
+      component: () => import('@/views/PaperAnalysisView.vue'),
+      meta: {
+        titleKey: 'routes.paperAnalysis',
+        icon: '📄'
+      }
+    },
     ...(import.meta.env.VITE_ENABLE_PLAYGROUND === 'true'
       ? [
           {
